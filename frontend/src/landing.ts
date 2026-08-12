@@ -191,6 +191,9 @@ export function renderLanding() {
       <div class="lp-container">
         <p><strong>ImobIA</strong> — agregador imobiliário inteligente.</p>
         <p>Versão MVP · © 2026</p>
+        <p>
+          Desenvolvido por&nbsp;<a href="https://www.cerradofinancas.com.br/" target="_blank" rel="noopener noreferrer">Cerrado Tech</a>
+        </p>
       </div>
     </footer>
   `;

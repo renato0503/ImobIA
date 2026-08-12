@@ -848,6 +848,14 @@ select:focus {
 .lp-footer p {
   margin: var(--space-1) 0;
 }
+.lp-footer a {
+  color: var(--teal-dark);
+  font-weight: 600;
+  text-decoration: none;
+}
+.lp-footer a:hover {
+  text-decoration: underline;
+}
 
 /* ---------- Responsivo (mobile-first, 1 coluna) ---------- */
 @media (max-width: 960px) {
