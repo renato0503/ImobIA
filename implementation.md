@@ -14,8 +14,8 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
 |------|--------|---------|-------------------|
 | **Fase 0 — Fundação** | Repositório, stack, config Firebase, CI da base | Concluída | Repo público com MIT; projeto `imobia-65bda` criado |
 | **Fase 1 — MVP** | PWA de busca + ingestão por IA + deploy | Concluída | App no ar com filtros granulares e captação via Groq |
-| **Fase 2 — Consolidação** | Papéis, segurança, seed real, integração WhatsApp/scraping | **Em andamento** | Base alimentada, ingestão funcional de ponta a ponta |
-| **Fase 3 — Go-Live** | Hardening, testes, métricas, CI/CD, docs finais | Futura | Plataforma estável para usuários externos |
+| **Fase 2 — Consolidação** | Papéis, segurança, landing page, mapeamento de workflows | **Em andamento** | Base alimentada, presença pública, fluxos documentados e testados |
+| **Fase 3 — Go-Live** | Hardening, automação de testes, métricas, CI/CD, docs finais | Futura | Plataforma estável para usuários externos |
 
 ---
 
@@ -58,27 +58,79 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
   - Criação de usuário próprio permitida; edição só por admin/owner.
 - **Script `add_admin.py`:** promove usuário a admin/owner na coleção `usuarios`.
 
+### Sprint 3 — Landing Page (Presença Pública)
+- **Objetivo:** apresentar a plataforma a clientes finais e corretores parceiros de forma honesta, deixando claras as funcionalidades já disponíveis e as que ainda estão em desenvolvimento.
+- **Roteamento hash-based (`#/` e `#/app`):**
+  - `main.ts` passou a ser o roteador da aplicação: `/` → landing, `/app` → login/dashboard.
+  - `onAuthStateChanged` + `hashchange` orquestram a renderização.
+- **`landing.ts` (novo módulo):** landing page profissional com:
+  - Header sticky com navegação por âncoras e CTA "Acessar plataforma".
+  - Hero com proposta de valor focada na busca granular (ex: "casa com energia solar e quintal").
+  - Seções "Para quem é", "Como funciona" (3 passos), "Para corretores parceiros" e "Em desenvolvimento".
+  - Transparência: seção explícita separando o que já funciona do que está em desenvolvimento (WhatsApp, scraping, fotos, área do corretor).
+- **Estilos:** bloco `LANDING PAGE` no `style.css` (grid, cards, hero com gradiente, responsivo).
+- **Sem invenção de funcionalidades:** toda a copy reflete o que o produto realmente entrega hoje (filtros combinados, resumo para WhatsApp, login/cadastro por e-mail e senha, PWA).
+
+### Sprint 4 — Mapeamento de Workflows (Diagramas Mermaid)
+- **Objetivo:** estudo recorrente do sistema para entender e mapear os fluxos reais antes de qualquer teste. Todo fluxo de código vira um diagrama Mermaid fiável (nomes reais de funções, arquivos e campos).
+- **Artefatos criados em `docs/diagrams/`:**
+  - `README.md` — índice e regras de uso (estudo recorrente).
+  - `00-arquitetura.md` — C4Context + limites de confiança (frontend/backend/Firebase).
+  - `01-auth-workflow.md` — sequência landing → login/cadastro → dashboard; state + flowchart; cenários A1–A6.
+  - `02-busca-workflow.md` — construção dinâmica da query (`where`/`in`/`array-contains`/`orderBy`/`limit`), filtro em memória, copiar resumo; cenários B1–B10.
+  - `03-ingestao-workflow.md` — CLI → Groq (`json_object`) → `_normalizar` → `firebase-admin` → Firestore; cenários C1–C8.
+  - `04-dados-er.md` — `erDiagram` de `imoveis`/`usuarios` + regras de segurança; cenários D1–D8.
+  - `05-matriz-testes.md` — matriz viva por workflow, com status de automação.
+- **Fidelidade ao código:** `main.ts`, `ui.ts`, `landing.ts`, `services/imoveis.ts`, `estrutura.py`, `firestore_repo.py`, `ingest.py`, `firestore.rules`.
+- **Regra de recorrência:** a cada nova feature, um novo diagrama é adicionado antes de qualquer teste; ao final de cada sprint, os diagramas são revisados.
+
+### Sprint 5 — Testes por Workflow (Recorrente)
+- **Objetivo:** converter os workflows mapeados em cenários de teste executáveis, começando pelos de maior risco.
+- **Frontend (unidade/estado):**
+  - Testar a construção da query em `services/imoveis.ts` (combinações de filtros).
+  - Testar o filtro em memória (múltiplas características + `valorMaximo`).
+- **Backend (unitários, pytest):**
+  - `test_estrutura.py` — normalizadores (`_normalizar_valor`, `_normalizar_finalidade`, `_normalizar_tipo`, `_normalizar_caracteristicas`, bairro default, campos ausentes).
+  - `test_firestore_repo.py` — (mock) `salvar_imovel` grava `criado_em`; erro sem `serviceAccount.json`.
+- **Regras (emulador Firestore):**
+  - Negativas de escrita por `leitor`; criação de `usuarios/{seuUID}` permitida; acesso owner raiz.
+- **E2E (Playwright):** landing → criar conta → login → buscar → copiar resumo → logout.
+- **Manuais:** validação em https://imobia.web.app (login/cadastro), PWA offline, ingestão CLI real.
+
 ---
 
-## 3. Sprint Atual (Consolidação)
+## 3. Sprint Atual (Mapeamento de Workflows + Testes)
+
+> **Caráter recorrente:** o estudo de workflows (Sprint 4) e a execução de testes por workflow (Sprint 5)
+> se repetem a cada sprint, mantendo `docs/diagrams/` sempre alinhado ao código.
 
 ### O que está sendo construído
 
-1. **Operacionalização do backend de ingestão:**
+1. **Documentação viva de workflows (`docs/diagrams/`):**
+   - Arquitetura (C4), autenticação, busca, ingestão e modelo de dados já mapeados em Mermaid.
+   - Matriz de testes por workflow (`05-matriz-testes.md`) como checklist recorrente.
+
+2. **Execução de testes (Fase 2):**
+   - Unitários do backend (`estrutura.py`/`firestore_repo.py`) — iniciar com pytest.
+   - E2E do fluxo de busca e autenticação (Playwright).
+   - Regras do Firestore validadas no emulador.
+
+3. **Operacionalização do backend de ingestão:**
    - O módulo de normalização (`estrutura.py`) está validado localmente (tipos, finalidade, valores R$, características em minúsculo).
    - A escrita no Firestore depende da **chave de serviço** (`backend/serviceAccount.json`), ainda não configurada no ambiente.
 
-2. **Gestão de papéis e base inicial:**
+4. **Gestão de papéis e base inicial:**
    - Regras de papel deployadas; falta criar o documento do admin na coleção `usuarios` (via `add_admin.py` ou manual no console) e popular a base com o `seed.py`.
 
 ### Desafios técnicos em aberto
 
 | Desafio | Impacto | Status |
 |---------|---------|--------|
-| `serviceAccount.json` não disponível | Backend não grava no Firestore | Bloqueia seed/ingest |
+| `serviceAccount.json` não disponível | Backend não grava no Firestore | Bloqueia seed/ingest e testes de integração |
 | Coleção `imoveis` vazia | Frontend não exibe resultados | Bloqueia validação ponta a ponta |
 | Índices adicionais exigidos pelo Firestore | Buscas combinadas podem falhar no console | Verificar ao rodar a 1ª busca |
 | Queries com múltiplos `array-contains` | Exigem índice composto + filtro em memória | Contornado (usa 1 característica na query) |
+| Automação de testes (pytest/Playwright) não iniciada | Falta base para regressão contínua | Em planejamento (Sprint 5) |
 
 ---
 
@@ -103,6 +155,13 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
 - [ ] Upload de fotos via Firebase Storage + renderização nos cards.
 - [ ] Paginação/`load more` para acervos grandes.
 
+### 4.3.1 Landing Page (Marketing)
+- [ ] Adicionar seção de depoimentos/parceiros quando houver usuários reais.
+- [ ] Preencher a seção "Já disponível" conforme novas features saírem (ex: fotos, WhatsApp).
+- [ ] SEO: Open Graph tags + `sitemap.xml` para indexação do Google.
+- [ ] Captura de leads (formulário de contato para corretores interessados).
+- [ ] Ajustar copy da landing quando a integração WhatsApp estiver pronta.
+
 ### 4.4 Scraping (Fase 3)
 - [ ] Estudo de sites-alvo e políticas de uso.
 - [ ] `scraper.py` com BeautifulSoup/Selenium + limpeza com pandas.
@@ -113,6 +172,15 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
 - [ ] Rate limiting e validação de payload na ingestão.
 - [ ] Testes unitários do `estrutura.py` (casos de R$, acentos, variações de texto).
 - [ ] Testes E2E do fluxo de busca (Playwright).
+
+### 4.5.1 Automação de testes (decorrente da Sprint 5)
+- [ ] Setup de `pytest` no backend (`backend/tests/`).
+- [ ] `test_estrutura.py` — normalizadores + bairro default + campos ausentes.
+- [ ] `test_firestore_repo.py` — mock de `salvar_imovel` (`criado_em`) e erro sem serviceAccount.
+- [ ] Setup do emulador Firestore (Firebase CLI) para testar `firestore.rules`.
+- [ ] Playwright: fluxo landing → cadastro → login → busca → copiar resumo → logout.
+- [ ] CI/CD: rodar pytest + build + Playwright no GitHub Actions.
+- [ ] Manter `docs/diagrams/05-matriz-testes.md` atualizado a cada sprint.
 
 ### 4.6 Operações e Observabilidade
 - [ ] Analytics no frontend (page views, buscas realizadas).
@@ -137,6 +205,9 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
 | 3 | Firestore com `array-contains` + filtro em memória | Evitar explosão de índices compostos no MVP |
 | 4 | Credenciais via `.env` (gitignored) | Evitar alertas de segredo; API key é pública por design |
 | 5 | Papéis via coleção `usuarios` + owner raiz hardcoded | Bootstrap seguro de administração |
+| 6 | Landing page integrada ao SPA com roteamento hash | Uma única build/deploy; sem custo extra de rota no hosting |
+| 7 | Workflows documentados em Mermaid (`docs/diagrams/`) | Diagramas versionáveis e renderizados nativamente no GitHub/VS Code |
+| 8 | Estudo de workflows recorrente e anterior aos testes | Garante fidelidade entre código, documentação e cenários de teste |
 
 ---
 
@@ -163,3 +234,13 @@ python seed.py         # popular base
 python ingest.py --entrada "Casa com energia solar no centro, aluguel 2500"
 python add_admin.py --uid <UID> --email <email> [--role admin|owner|leitor]
 ```
+
+## 7. Estudo de workflows (recorrente)
+
+Quando uma feature nova for desenvolvida ou um bug for investigado:
+
+1. **Mapear:** criar/atualizar o diagrama em `docs/diagrams/NN-*.md` com Mermaid (fiel ao código real).
+2. **Testar:** adicionar os cenários à `docs/diagrams/05-matriz-testes.md`.
+3. **Executar:** rodar unitários (pytest), regras (emulador) e E2E (Playwright).
+4. **Revisar:** conferir nomes reais de funções/endpoints; marcar fluxos futuros com `🚧`.
+
