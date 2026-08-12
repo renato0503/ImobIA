@@ -8,7 +8,7 @@ export function renderLanding() {
   app.innerHTML = `
     <header class="lp-header">
       <div class="lp-container lp-nav">
-        <a class="lp-logo" href="#/">🏠 ImobIA</a>
+        <a class="lp-logo" href="#/"><img src="/logoletras.png" alt="ImobIA" class="lp-logo-img" /></a>
         <nav class="lp-nav-links">
           <a href="#para-quem">Para quem é</a>
           <a href="#como-funciona">Como funciona</a>

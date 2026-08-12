@@ -26,7 +26,7 @@ export function renderLogin() {
   app.innerHTML = `
     <div class="login">
       <div class="login-box">
-        <h1 class="logo">🏠 ImobIA</h1>
+        <img src="/logoletras.png" alt="ImobIA" class="login-logo login-logo-letras" />
         <p class="tagline">Agregador imobiliário inteligente</p>
         <form id="form-login" novalidate>
           <label class="campo">
@@ -81,7 +81,7 @@ export function renderDashboard() {
 
   app.innerHTML = `
     <header class="topbar">
-      <h1 class="logo">🏠 ImobIA</h1>
+      <h1 class="logo topbar-logo"><img src="/logosimbolo.png" alt="ImobIA" class="logo-img" /></h1>
       <div class="topbar-actions">
         ${usuarioAdmin ? '<span class="tag finalidade">Admin</span>' : ''}
         <button id="btn-copiar-resumo" class="btn btn-outline">Copiar resumo</button>

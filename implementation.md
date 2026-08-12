@@ -190,6 +190,18 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
 - **Documentação de operação:** `docs/operacao.md` — rotinas, deploy, testes, monitoramento,
   escalabilidade e troubleshooting.
 
+### Sprint 14 — Branding (Logos e Ícones)
+- **Logos:** `logosimbolo.png` (símbolo) e `logoletras.png` (letreiro) na raiz como fontes.
+- **`scripts/gerar_icones.py`:** converte as logos (WebP nomeadas `.png`) e gera:
+  `favicon.ico` (16/32/48), `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`,
+  `logosimbolo.png` e `logoletras.png` em `frontend/public/`.
+- **Uso do letreiro (onde cabe):** header da landing e tela de login.
+- **Uso do símbolo:** topbar do dashboard (compacto), favicon e ícones PWA.
+- **`index.html`:** `<link rel="icon">` para favicon.ico + PNGs; `apple-touch-icon`;
+  OG/Twitter `image` apontando para o letreiro.
+- **Manifest PWA:** ícones 192/512 + símbolo (any) + letreiro (any).
+- **E2E:** 8/8 passando (o teste A1 flakou uma vez por `ERR_ABORTED` transitório; passou no rerun).
+
 ---
 
 ## 3. Sprint Atual (Consolidação — etapa final)

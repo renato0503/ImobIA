@@ -18,11 +18,24 @@ ImobIA/
 │   │   ├── firebase.ts  # configuração do Firebase
 │   │   ├── services/    # queries do Firestore
 │   │   └── ui.ts        # renderização de filtros + cards
-│   └── public/          # ícones do PWA
+│   └── public/          # logos, ícones do PWA
 ├── backend/             # Python: ingestão via Groq + Firestore
-├── firebase.json        # hosting + firestore
+├── scripts/             # utilitários (ex: gerar ícones a partir das logos)
+├── firebase.json        # hosting + firestore + storage
 ├── firestore.rules      # regras de segurança
+├── storage.rules        # regras do Cloud Storage
 └── firestore.indexes.json
+```
+
+## Logos e ícones
+
+As logos ficam na raiz (`logosimbolo.png` = símbolo, `logoletras.png` = letreiro) e os ícones
+são gerados em `frontend/public/`. Para regenerar após trocar as logos:
+
+```bash
+python scripts/gerar_icones.py
+npm run build   # no frontend
+firebase deploy --only hosting
 ```
 
 ## Modelo de dados (Firestore: coleção `imoveis`)

@@ -14,7 +14,7 @@ export default defineConfig({
   plugins: [
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'robots.txt'],
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'logosimbolo.png', 'logoletras.png', 'robots.txt'],
       manifest: {
         name: 'ImobIA',
         short_name: 'ImobIA',
@@ -34,6 +34,18 @@ export default defineConfig({
             src: '/icon-512.png',
             sizes: '512x512',
             type: 'image/png',
+          },
+          {
+            src: '/logosimbolo.png',
+            sizes: '512x499',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/logoletras.png',
+            sizes: '512x153',
+            type: 'image/png',
+            purpose: 'any',
           },
         ],
       },
