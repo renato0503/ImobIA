@@ -135,6 +135,19 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
   - Execução: `firebase emulators:exec --only firestore "npm test"` — **11/11 testes passando**.
 - **Requisito local:** JDK 21+ (firebase-tools 15) — instalado via winget (`Temurin 21`).
 
+### Sprint 11 — Operacionalização e E2E
+- **Service account:** chave criada via `gcloud iam service-accounts keys create` para
+  `firebase-adminsdk-fbsvc@imobia-65bda.iam.gserviceaccount.com` → `backend/serviceAccount.json` (gitignored).
+- **Base populada:** `python seed.py` gravou 4 imóveis de exemplo na coleção `imoveis`.
+- **Admin criado:** `python add_admin.py --uid ef6Nu3M7FMRjaSmmTSvGlfOOiQI3 --email gestor.renatorosa@gmail.com --role owner`.
+- **Secrets do GitHub Actions:** `FIREBASE_SERVICE_ACCOUNT`, `VITE_FIREBASE_*`, `E2E_EMAIL` e `E2E_SENHA` configurados via `gh secret set`.
+- **Playwright E2E (`frontend/tests/e2e/`):**
+  - `criar-usuario-teste.mjs` — cria conta via REST API do Firebase Auth (usado para o usuário `e2e.teste@imobia.app`).
+  - `fluxo-completo.spec.ts` — 7 cenários (A1–A6, B2, B2b, B7) contra produção.
+  - `playwright.config.ts` com permissão de clipboard; **7/7 passando**.
+- **CI:** novo job `e2e` no `.github/workflows/ci.yml` (Playwright contra produção antes do deploy);
+  deploy agora depende de pytest + build + e2e.
+
 ---
 
 ## 3. Sprint Atual (Consolidação — etapa final)
@@ -149,35 +162,34 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
 - ✅ Ingestão por link, áudio e endpoint HTTP; scraper com detecção de duplicados.
 - ✅ Busca com faixa de valor, ordenação, paginação e autocomplete de bairros.
 - ✅ Landing com SEO, leads e Analytics; CI/CD no GitHub Actions.
+- ✅ Base populada (seed com 4 imóveis), admin criado como `owner`.
+- ✅ **Playwright E2E — 7 cenários passando contra produção** (landing, login, senha errada, busca com filtro, copiar resumo, sair).
+- ✅ Secrets do GitHub Actions configurados (service account + VITE_FIREBASE_* + credenciais E2E).
 
 ### Em andamento / faltando
 
-1. **E2E Playwright** (fluxo landing → cadastro → login → busca → copiar resumo → logout):
-   - Exige login/cadastro real; depende de popular a base e criar o admin.
-2. **Operacionalização do backend de ingestão:**
-   - O módulo de normalização (`estrutura.py`) está validado localmente (tipos, finalidade, valores R$, características em minúsculo).
-   - A escrita no Firestore depende da **chave de serviço** (`backend/serviceAccount.json`), ainda não configurada no ambiente.
-3. **Gestão de papéis e base inicial:**
-   - Regras de papel deployadas; falta criar o documento do admin na coleção `usuarios` (via `add_admin.py` ou manual no console) e popular a base com o `seed.py`.
+1. **Validar índices compostos** na primeira busca combinada real no console (aceitar sugestões do Firestore).
+2. **Rate limiting e validação de payload** na ingestão.
+3. **Upload de fotos** via Firebase Storage + renderização nos cards.
+4. **Integração WhatsApp** (bot apontando para `POST /ingestir`).
 
 ### Desafios técnicos em aberto
 
 | Desafio | Impacto | Status |
 |---------|---------|--------|
-| `serviceAccount.json` não disponível | Backend não grava no Firestore | Bloqueia seed/ingest e testes de integração |
-| Coleção `imoveis` vazia | Frontend não exibe resultados | Bloqueia validação ponta a ponta |
-| Índices adicionais exigidos pelo Firestore | Buscas combinadas podem falhar no console | Verificar ao rodar a 1ª busca |
+| Índices adicionais exigidos pelo Firestore | Buscas combinadas podem falhar no console | Verificar ao rodar a 1ª busca combinada |
 | Queries com múltiplos `array-contains` | Exigem índice composto + filtro em memória | Contornado (usa 1 característica na query) |
-| Playwright E2E pendente | Falta validação automática do fluxo completo | Depende de conta/seed |
+| Integração WhatsApp | Automação de captação via mensagem | Backlog |
+| Upload de fotos | Cards sem galeria | Backlog |
 
 ---
 
 ## 4. Backlog e Próximos Passos (até o Go-Live)
 
 ### 4.1 Bloqueios críticos (desbloquear primeiro)
-- [ ] Gerar chave privada no Firebase Console e salvar em `backend/serviceAccount.json`.
-- [ ] Executar `python seed.py` para popular a coleção `imoveis`.
-- [ ] Criar documento do admin na coleção `usuarios` (`python add_admin.py --uid ef6Nu3M7FMRjaSmmTSvGlfOOiQI3 --email gestor.renatorosa@gmail.com`).
+- [x] Gerar chave privada no Firebase Console e salvar em `backend/serviceAccount.json`. *(feito via `gcloud iam service-accounts keys create`)*
+- [x] Executar `python seed.py` para popular a coleção `imoveis`. *(4 imóveis de exemplo gravados)*
+- [x] Criar documento do admin na coleção `usuarios` (`python add_admin.py --uid ef6Nu3M7FMRjaSmmTSvGlfOOiQI3 --email gestor.renatorosa@gmail.com`). *(criado como `owner`)*
 - [ ] Validar busca real no console e criar índices compostos pendentes.
 
 ### 4.2 Ingestão por IA (Fase 2)
@@ -208,16 +220,16 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
 ### 4.5 Segurança e Qualidade
 - [x] Auditoria das regras do Firestore (testes no emulador: `tests/rules/`) — 11/11 passando.
 - [ ] Rate limiting e validação de payload na ingestão.
-- [x] Testes unitários do `estrutura.py` (casos de R$, acentos, variações de texto) — 34 testes.
-- [ ] Testes E2E do fluxo de busca (Playwright).
+- [x] Testes unitários do `estrutura.py` (casos de R$, acentos, variações de texto) — 41 testes.
+- [x] Testes E2E do fluxo de busca (Playwright) — 7 cenários contra produção.
 
 ### 4.5.1 Automação de testes (decorrente da Sprint 5)
 - [x] Setup de `pytest` no backend (`backend/tests/` + `pytest.ini`).
 - [x] `test_estrutura.py` — normalizadores + bairro default + campos ausentes.
 - [x] `test_firestore_repo.py` — mock de `salvar_imovel` (`criado_em`) e erro sem serviceAccount.
 - [x] Setup do emulador Firestore (Firebase CLI) para testar `firestore.rules` (`tests/rules/`).
-- [ ] Playwright: fluxo landing → cadastro → login → busca → copiar resumo → logout.
-- [ ] CI/CD: rodar pytest + build + Playwright no GitHub Actions (pytest+build já; Playwright pendente).
+- [x] Playwright: fluxo landing → cadastro → login → busca → copiar resumo → logout.
+- [x] CI/CD: rodar pytest + build + Playwright no GitHub Actions.
 - [ ] Manter `docs/diagrams/05-matriz-testes.md` atualizado a cada sprint.
 
 ### 4.6 Operações e Observabilidade

@@ -97,16 +97,17 @@ flowchart TD
 | Workflow | Diagrama | Cenários | Automação | Status |
 |----------|----------|----------|-----------|--------|
 | Arquitetura | `00-arquitetura.md` | — | — | ✅ Documentado |
-| Autenticação | `01-auth-workflow.md` | A1–A6 | 🚧 Playwright | ✅ Documentado |
-| Busca | `02-busca-workflow.md` | B1–B10 | 🚧 Playwright | ✅ Documentado |
+| Autenticação | `01-auth-workflow.md` | A1–A6 | ✅ Playwright (7 E2E) | ✅ Documentado e testado |
+| Busca | `02-busca-workflow.md` | B1–B11 | ✅ Playwright (filtros) | ✅ Documentado e testado |
 | Ingestão | `03-ingestao-workflow.md` | C1–C12 | ✅ pytest (41) | ✅ Documentado e testado |
 | Dados/Segurança | `04-dados-er.md` | D1–D8 + L1–L4 | ✅ emulador (11) | ✅ Documentado e testado |
 
 > **Recorrência:** ao final de cada sprint, rodar a matriz; a cada feature nova, adicionar diagrama e cenários.
 
-## Execuções registradas (Sprint 10)
+## Execuções registradas (Sprints 10–11)
 
 | Data | Suite | Resultado |
 |------|-------|-----------|
 | Ago/2026 | `pytest backend/tests/` (estrutura + firestore_repo + captura) | 41 passando |
 | Ago/2026 | `tests/rules/test-rules.mjs` (emulador) | 11 passando |
+| Ago/2026 | `playwright test` (E2E contra produção) | 7 passando |
