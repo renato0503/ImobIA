@@ -27,6 +27,14 @@ erDiagram
     string email "nullable (preenchido via add_admin)"
     number criado_em "timestamp"
   }
+
+  LEADS {
+    string id PK "doc id gerado"
+    string nome "obrigatório, > 0"
+    string email "obrigatório, deve conter @"
+    string telefone "opcional"
+    number criado_em "timestamp"
+  }
 ```
 
 ## Regras de segurança (resumo — `firestore.rules`)
@@ -67,6 +75,10 @@ flowchart TD
 | D6 | Usuário cria doc em `usuarios/{UID de outro}` | Negado |
 | D7 | Owner raiz (`ef6Nu3M7...`) tem acesso admin | Permitido mesmo sem doc em `usuarios` |
 | D8 | Editar doc de outro usuário | Negado (só `ehAdmin()`) |
+| L1 | Anônimo cria lead válido (nome+email) | Permitido |
+| L2 | Lead com email inválido (sem `@`) | Negado |
+| L3 | Anônimo lê coleção `leads` | Negado |
+| L4 | Admin lê `leads` | Permitido |
 
 ## Notas de modelagem
 

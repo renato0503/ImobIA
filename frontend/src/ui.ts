@@ -1,6 +1,11 @@
 import { db } from './firebase';
-import { auth } from './firebase';
-import { buscarImoveis, type BuscaFiltros } from './services/imoveis';
+import { auth, analytics } from './firebase';
+import {
+  buscarImoveis,
+  listarBairros,
+  PAGINA_PADRAO,
+  type BuscaFiltros,
+} from './services/imoveis';
 import type { Imovel } from './types';
 import { entrarComEmail, criarConta, sair } from './main';
 
@@ -109,9 +114,21 @@ export function renderDashboard() {
           <datalist id="lista-bairros"></datalist>
         </label>
 
+        <div class="campo">
+          <span>Faixa de valor (R$)</span>
+          <div class="linha-2">
+            <input id="f-valor-min" type="number" min="0" placeholder="Mínimo" />
+            <input id="f-valor-max" type="number" min="0" placeholder="Máximo" />
+          </div>
+        </div>
+
         <label class="campo">
-          <span>Valor máximo (R$)</span>
-          <input id="f-valor" type="number" min="0" placeholder="Ex: 3000" />
+          <span>Ordenação</span>
+          <select id="f-ordem">
+            <option value="recentes">Mais recentes</option>
+            <option value="menor-preco">Menor valor</option>
+            <option value="maior-preco">Maior valor</option>
+          </select>
         </label>
 
         <div class="campo">
@@ -128,6 +145,9 @@ export function renderDashboard() {
           <h2 id="txt-contagem">Carregando imóveis...</h2>
         </div>
         <div id="cards" class="cards"></div>
+        <button id="btn-mais" class="btn btn-outline btn-mais" style="display:none">
+          Carregar mais
+        </button>
       </section>
     </main>
 
@@ -161,7 +181,11 @@ export function renderDashboard() {
 
   const tipoEl = document.getElementById('f-tipo') as HTMLSelectElement;
   const bairroEl = document.getElementById('f-bairro') as HTMLInputElement;
-  const valorEl = document.getElementById('f-valor') as HTMLInputElement;
+  const valorMinEl = document.getElementById('f-valor-min') as HTMLInputElement;
+  const valorMaxEl = document.getElementById('f-valor-max') as HTMLInputElement;
+  const ordemEl = document.getElementById('f-ordem') as HTMLSelectElement;
+
+  carregarBairros();
 
   document.getElementById('btn-buscar')!.addEventListener('click', () => {
     const finalidadeSel = (document.getElementById('f-finalidade') as HTMLSelectElement).value;
@@ -169,11 +193,15 @@ export function renderDashboard() {
       finalidadeSel === 'todos' ? 'ambos' : (finalidadeSel as any);
     estadoFiltros.tipo = tipoEl.value || undefined;
     estadoFiltros.bairro = bairroEl.value || undefined;
-    const valor = parseFloat(valorEl.value);
-    estadoFiltros.valorMaximo = isNaN(valor) ? undefined : valor;
+    const min = parseFloat(valorMinEl.value);
+    const max = parseFloat(valorMaxEl.value);
+    estadoFiltros.valorMinimo = isNaN(min) ? undefined : min;
+    estadoFiltros.valorMaximo = isNaN(max) ? undefined : max;
+    estadoFiltros.ordenacao = (ordemEl.value as any) || 'recentes';
     estadoFiltros.caracteristicas = Array.from(
       document.querySelectorAll<HTMLInputElement>('.chip-input:checked')
     ).map((i) => i.value);
+    paginarReset = true;
     executarBusca();
   });
 
@@ -181,33 +209,71 @@ export function renderDashboard() {
     (document.getElementById('f-finalidade') as HTMLSelectElement).value = 'todos';
     tipoEl.value = '';
     bairroEl.value = '';
-    valorEl.value = '';
+    valorMinEl.value = '';
+    valorMaxEl.value = '';
+    ordemEl.value = 'recentes';
     document.querySelectorAll('.chip-input').forEach((c) => ((c as HTMLInputElement).checked = false));
     estadoFiltros.finalidade = 'ambos';
     estadoFiltros.tipo = undefined;
     estadoFiltros.bairro = undefined;
+    estadoFiltros.valorMinimo = undefined;
     estadoFiltros.valorMaximo = undefined;
+    estadoFiltros.ordenacao = 'recentes';
     estadoFiltros.caracteristicas = [];
+    paginarReset = true;
     executarBusca();
   });
 
   document.getElementById('btn-sair')!.addEventListener('click', sair);
   document.getElementById('btn-copiar-resumo')!.addEventListener('click', copiarResumo);
 
+  const btnMais = document.getElementById('btn-mais')!;
+  btnMais.addEventListener('click', () => {
+    estadoFiltros.limite = (estadoFiltros.limite ?? PAGINA_PADRAO) + PAGINA_PADRAO;
+    executarBusca(true);
+  });
+
   executarBusca();
 }
 
-async function executarBusca() {
+async function carregarBairros() {
+  try {
+    const bairros = await listarBairros(db);
+    const datalist = document.getElementById('lista-bairros')!;
+    datalist.innerHTML = bairros
+      .map((b) => `<option value="${b}"></option>`)
+      .join('');
+  } catch (err) {
+    console.warn('Não foi possível carregar bairros:', err);
+  }
+}
+
+let paginarReset = true;
+
+async function executarBusca(acrescentar = false) {
   const cardsEl = document.getElementById('cards')!;
   const contagemEl = document.getElementById('txt-contagem')!;
-  contagemEl.textContent = 'Buscando...';
-  cardsEl.innerHTML = '<p class="vazio">Carregando imóveis...</p>';
+  const btnMais = document.getElementById('btn-mais') as HTMLButtonElement;
+
+  if (!acrescentar) {
+    contagemEl.textContent = 'Buscando...';
+    cardsEl.innerHTML = '<p class="vazio">Carregando imóveis...</p>';
+  }
+  btnMais.style.display = 'none';
 
   try {
     const imoveis = await buscarImoveis(db, estadoFiltros);
     ultimosResultados = imoveis;
     contagemEl.textContent = `${imoveis.length} imóvel(is) encontrados`;
-    renderCards(cardsEl, imoveis);
+    renderCards(cardsEl, imoveis, acrescentar);
+    registrarEvento('busca', {
+      finalidade: estadoFiltros.finalidade,
+      tipo: estadoFiltros.tipo,
+      caracteristicas: estadoFiltros.caracteristicas.length,
+      resultados: imoveis.length,
+    });
+
+    btnMais.style.display = imoveis.length >= (estadoFiltros.limite ?? PAGINA_PADRAO) ? 'block' : 'none';
   } catch (err) {
     console.error(err);
     contagemEl.textContent = 'Erro ao buscar';
@@ -215,13 +281,13 @@ async function executarBusca() {
   }
 }
 
-function renderCards(el: HTMLElement, imoveis: Imovel[]) {
+function renderCards(el: HTMLElement, imoveis: Imovel[], acrescentar = false) {
   if (imoveis.length === 0) {
     el.innerHTML = '<p class="vazio">Nenhum imóvel encontrado com esses filtros.</p>';
     return;
   }
 
-  el.innerHTML = imoveis
+  const html = imoveis
     .map((im) => {
       const foto = im.fotos && im.fotos.length > 0 ? im.fotos[0] : null;
       const valor = im.finalidade === 'aluguel'
@@ -273,6 +339,12 @@ function renderCards(el: HTMLElement, imoveis: Imovel[]) {
     `;
     })
     .join('');
+
+  if (acrescentar) {
+    el.insertAdjacentHTML('beforeend', html);
+  } else {
+    el.innerHTML = html;
+  }
 }
 
 function finalidadeLabel(f: string) {
@@ -322,9 +394,20 @@ declare global {
 window.copiarUm = (id: string) => {
   const im = ultimosResultados.find((i) => i.id === id);
   if (!im) return;
+  registrarEvento('copiar_resumo');
   navigator.clipboard.writeText(resumoDoImovel(im)).then(() => {
     mostrarToast('Resumo copiado!');
   });
 };
+
+function registrarEvento(nome: string, params?: Record<string, unknown>) {
+  analytics?.then((a) => {
+    if (a) {
+      import('firebase/analytics').then(({ logEvent }) =>
+        logEvent(a, nome, params as any)
+      );
+    }
+  });
+}
 
 export { auth };

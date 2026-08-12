@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
+import { getAnalytics, isSupported } from 'firebase/analytics';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -15,3 +16,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+
+// Analytics é opcional: inicializa apenas quando suportado (evita erros em
+// ambientes sem suporte a cookies/navegador, ex: testes).
+export const analytics = isSupported()
+  .then((ok) => (ok ? getAnalytics(app) : null))
+  .catch(() => null);

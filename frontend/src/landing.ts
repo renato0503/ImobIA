@@ -1,4 +1,6 @@
 import { irParaApp } from './main';
+import { db, analytics } from './firebase';
+import { salvarLead } from './services/leads';
 
 const app = document.getElementById('app')!;
 
@@ -11,6 +13,7 @@ export function renderLanding() {
           <a href="#para-quem">Para quem é</a>
           <a href="#como-funciona">Como funciona</a>
           <a href="#parceiros">Corretores parceiros</a>
+          <a href="#contato">Seja parceiro</a>
           <a href="#transparencia">Em desenvolvimento</a>
         </nav>
         <button id="lp-entrar" class="btn btn-primary">Acessar plataforma</button>
@@ -125,6 +128,22 @@ export function renderLanding() {
         </div>
       </section>
 
+      <section id="contato" class="lp-section">
+        <div class="lp-container">
+          <h2>Quer ser um corretor parceiro?</h2>
+          <p class="lp-lead">
+            Deixe seu contato e retornamos para apresentar a plataforma e os próximos passos.
+          </p>
+          <form id="lp-lead-form" class="lp-lead-form" novalidate>
+            <input id="lead-nome" type="text" placeholder="Seu nome" required />
+            <input id="lead-email" type="email" placeholder="Seu e-mail" required />
+            <input id="lead-telefone" type="tel" placeholder="WhatsApp (opcional)" />
+            <button type="submit" class="btn btn-primary">Tenho interesse</button>
+          </form>
+          <p id="lead-status" class="lp-lead-status"></p>
+        </div>
+      </section>
+
       <section id="transparencia" class="lp-section lp-section-alt">
         <div class="lp-container">
           <h2>O que já funciona e o que está em desenvolvimento</h2>
@@ -172,4 +191,34 @@ export function renderLanding() {
   `;
 
   document.getElementById('lp-entrar')!.addEventListener('click', irParaApp);
+
+  const form = document.getElementById('lp-lead-form') as HTMLFormElement;
+  if (form) {
+    form.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const status = document.getElementById('lead-status')!;
+      const nome = (document.getElementById('lead-nome') as HTMLInputElement).value.trim();
+      const email = (document.getElementById('lead-email') as HTMLInputElement).value.trim();
+      const telefone = (document.getElementById('lead-telefone') as HTMLInputElement).value.trim();
+
+      status.textContent = 'Enviando...';
+      try {
+        await salvarLead(db, { nome, email, telefone: telefone || undefined });
+        analytics?.then((a) => {
+          if (a) {
+            import('firebase/analytics').then(({ logEvent }) =>
+              logEvent(a, 'lead_enviado' as any)
+            );
+          }
+        });
+        status.textContent = 'Obrigado! Retornaremos em breve.';
+        status.className = 'lp-lead-status lp-lead-status-ok';
+        form.reset();
+      } catch (err) {
+        console.error(err);
+        status.textContent = 'Não foi possível enviar. Tente novamente em instantes.';
+        status.className = 'lp-lead-status lp-lead-status-erro';
+      }
+    });
+  }
 }

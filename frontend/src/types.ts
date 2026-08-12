@@ -14,4 +14,5 @@ export interface Imovel {
   fotos?: string[];
   descricao?: string;
   criado_em?: number;
+  valor_efetivo?: number | null;
 }

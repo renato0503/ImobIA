@@ -97,29 +97,67 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
 - **E2E (Playwright):** landing → criar conta → login → buscar → copiar resumo → logout.
 - **Manuais:** validação em https://imobia.web.app (login/cadastro), PWA offline, ingestão CLI real.
 
+### Sprint 6 — Implantação do Backlog (Backend)
+- **Testes unitários (pytest):** `tests/test_estrutura.py` (normalizadores, R$, acentos, bairro default, campos ausentes), `tests/test_firestore_repo.py` (mock de `salvar_imovel`, `criado_em`, erro sem serviceAccount) e `tests/test_captura.py` (extração com requests/BS4 mockados). **41 testes passando.**
+- **Ingestão por link real:** novo `backend/captura.py` — baixa a URL com `requests` + `BeautifulSoup`, extrai título/OG/descrição/parágrafos. `ingest.py --link` agora usa esse conteúdo em vez de só mandar a URL crua.
+- **Transcrição de áudio:** `estrutura.transcrever_audio()` via API Groq (`whisper-large-v3`), com `--audio` no CLI.
+- **Endpoint HTTP (Flask):** `backend/server.py` com `GET /health` e `POST /ingestir` (aceita `texto`/`url`/`audio`), token opcional via `API_TOKENS` (modo dev default).
+- **Scraper extensível:** `backend/scraper.py` com registry de adapters por site, detecção de duplicados (bairro+tipo+valores) e `--dry-run`. Adapter de exemplo presente; adapters reais ficam para a definição de sites-alvo.
+- **Logs estruturados:** `logging` configurado em `ingest.py`, `server.py`, `scraper.py`, `captura.py` e `estrutura.py`.
+- **Correção:** `_normalizar_tipo` agora prioriza tipos multi-palavra e ignora acentos (`unicodedata`) — "casa em condomínio" casa corretamente.
+
+### Sprint 7 — Implantação do Backlog (Frontend de Busca)
+- **Faixa de valor:** filtros `Valor mínimo` e `Valor máximo` (antes só máximo).
+- **Ordenação:** `Mais recentes`, `Menor valor`, `Maior valor` (em memória, com `valor_efetivo` no tipo).
+- **Paginação:** botão "Carregar mais" incrementa o `limit` (`PAGINA_PADRAO = 50`) com `insertAdjacentHTML`.
+- **Autocomplete de bairros:** `listarBairros()` consulta o acervo e popula o `<datalist>` do campo bairro.
+- **Refatoração de `services/imoveis.ts`:** tipos de filtro estendidos, `QueryConstraint` tipado, função `ordenar()`.
+- **TypeScript estrito** validado via `tsc` no build.
+
+### Sprint 8 — Landing (SEO, Leads e Analytics)
+- **SEO:** Open Graph + Twitter Card + `canonical` + `theme-color` no `index.html`; `sitemap.xml` em `public/`.
+- **Captura de leads:** seção "Quer ser um corretor parceiro?" com formulário (nome, e-mail, WhatsApp) gravando na coleção `leads` via `services/leads.ts`.
+- **Regras de `leads`:** novo `match /leads/{leadId}` — `create` público com validação de campos (nome>0, email com `@`, chaves restritas); leitura/escrita de edição apenas `ehAdmin()`. Validado no emulador.
+- **Firebase Analytics:** inicialização condicional (`isSupported()`), eventos `busca` e `copiar_resumo` no app e `lead_enviado` na landing.
+- **Code-splitting:** chunk manual do Firebase (`manualChunks`) reduzindo o bundle principal para ~57 kB.
+
+### Sprint 9 — CI/CD (GitHub Actions)
+- **`.github/workflows/ci.yml`:**
+  - Job `backend-test`: instala `requirements.txt` e roda `pytest tests/`.
+  - Job `frontend-build`: `npm ci` + build com secrets do Firebase → artefato `frontend-dist`.
+  - Job `deploy` (push em `main`): usa `FirebaseExtended/action-hosting-deploy` para deploy em `live`.
+  - Deploy requer secrets: `FIREBASE_SERVICE_ACCOUNT` + variáveis `VITE_FIREBASE_*`.
+
+### Sprint 10 — Validação das Regras no Emulador
+- **`tests/rules/`** (Node + `@firebase/rules-unit-testing`):
+  - Subprojeto próprio com `package.json` (script `npm test`).
+  - `test-rules.mjs` cobre D1–D7 (leitura/escrita de `imoveis` e `usuarios`, owner raiz) e L1–L4 (`leads`).
+  - Execução: `firebase emulators:exec --only firestore "npm test"` — **11/11 testes passando**.
+- **Requisito local:** JDK 21+ (firebase-tools 15) — instalado via winget (`Temurin 21`).
+
 ---
 
-## 3. Sprint Atual (Mapeamento de Workflows + Testes)
+## 3. Sprint Atual (Consolidação — etapa final)
 
 > **Caráter recorrente:** o estudo de workflows (Sprint 4) e a execução de testes por workflow (Sprint 5)
 > se repetem a cada sprint, mantendo `docs/diagrams/` sempre alinhado ao código.
 
-### O que está sendo construído
+### Já concluído nesta fase
 
-1. **Documentação viva de workflows (`docs/diagrams/`):**
-   - Arquitetura (C4), autenticação, busca, ingestão e modelo de dados já mapeados em Mermaid.
-   - Matriz de testes por workflow (`05-matriz-testes.md`) como checklist recorrente.
+- ✅ Testes unitários do backend (pytest) — **34 passando**.
+- ✅ Regras do Firestore validadas no emulador (rules-unit-testing) — **11 passando**.
+- ✅ Ingestão por link, áudio e endpoint HTTP; scraper com detecção de duplicados.
+- ✅ Busca com faixa de valor, ordenação, paginação e autocomplete de bairros.
+- ✅ Landing com SEO, leads e Analytics; CI/CD no GitHub Actions.
 
-2. **Execução de testes (Fase 2):**
-   - Unitários do backend (`estrutura.py`/`firestore_repo.py`) — iniciar com pytest.
-   - E2E do fluxo de busca e autenticação (Playwright).
-   - Regras do Firestore validadas no emulador.
+### Em andamento / faltando
 
-3. **Operacionalização do backend de ingestão:**
+1. **E2E Playwright** (fluxo landing → cadastro → login → busca → copiar resumo → logout):
+   - Exige login/cadastro real; depende de popular a base e criar o admin.
+2. **Operacionalização do backend de ingestão:**
    - O módulo de normalização (`estrutura.py`) está validado localmente (tipos, finalidade, valores R$, características em minúsculo).
    - A escrita no Firestore depende da **chave de serviço** (`backend/serviceAccount.json`), ainda não configurada no ambiente.
-
-4. **Gestão de papéis e base inicial:**
+3. **Gestão de papéis e base inicial:**
    - Regras de papel deployadas; falta criar o documento do admin na coleção `usuarios` (via `add_admin.py` ou manual no console) e popular a base com o `seed.py`.
 
 ### Desafios técnicos em aberto
@@ -130,7 +168,7 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
 | Coleção `imoveis` vazia | Frontend não exibe resultados | Bloqueia validação ponta a ponta |
 | Índices adicionais exigidos pelo Firestore | Buscas combinadas podem falhar no console | Verificar ao rodar a 1ª busca |
 | Queries com múltiplos `array-contains` | Exigem índice composto + filtro em memória | Contornado (usa 1 característica na query) |
-| Automação de testes (pytest/Playwright) não iniciada | Falta base para regressão contínua | Em planejamento (Sprint 5) |
+| Playwright E2E pendente | Falta validação automática do fluxo completo | Depende de conta/seed |
 
 ---
 
@@ -144,48 +182,48 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
 
 ### 4.2 Ingestão por IA (Fase 2)
 - [ ] **Integração WhatsApp (Twilio/Cloud Functions):** receber mensagem de áudio/texto e disparar a ingestão.
-- [ ] **Transcrição de áudio:** integrar Whisper (ou API da Groq) antes da estruturação.
-- [ ] **Ingestão por link real:** baixar conteúdo da URL (ex: `requests` + parser) antes de mandar ao Groq.
-- [ ] Endpoint HTTP (ex: Cloud Run/Cloud Functions) para o `ingest.py`, evitando execução só via CLI.
+- [x] **Transcrição de áudio:** `estrutura.transcrever_audio()` via Groq (`whisper-large-v3`) + `ingest.py --audio`.
+- [x] **Ingestão por link real:** `captura.py` baixa a URL e extrai título/OG/descrição/parágrafos.
+- [x] Endpoint HTTP (`server.py` — Flask) com `GET /health` e `POST /ingestir` (texto/url/audio).
 
 ### 4.3 Busca e Frontend
-- [ ] Autocomplete de bairros a partir dos dados reais do banco (popula `<datalist>`).
+- [x] Autocomplete de bairros a partir dos dados reais do banco (popula `<datalist>`).
 - [ ] Suporte a múltiplas características na query nativa (revisar índices).
-- [ ] Filtrar por faixa de valor (mín/máx) e ordenação.
+- [x] Filtrar por faixa de valor (mín/máx) e ordenação.
 - [ ] Upload de fotos via Firebase Storage + renderização nos cards.
-- [ ] Paginação/`load more` para acervos grandes.
+- [x] Paginação/`load more` para acervos grandes.
 
 ### 4.3.1 Landing Page (Marketing)
 - [ ] Adicionar seção de depoimentos/parceiros quando houver usuários reais.
 - [ ] Preencher a seção "Já disponível" conforme novas features saírem (ex: fotos, WhatsApp).
-- [ ] SEO: Open Graph tags + `sitemap.xml` para indexação do Google.
-- [ ] Captura de leads (formulário de contato para corretores interessados).
+- [x] SEO: Open Graph tags + `sitemap.xml` para indexação do Google.
+- [x] Captura de leads (formulário de contato para corretores interessados) — coleção `leads`.
 - [ ] Ajustar copy da landing quando a integração WhatsApp estiver pronta.
 
 ### 4.4 Scraping (Fase 3)
 - [ ] Estudo de sites-alvo e políticas de uso.
-- [ ] `scraper.py` com BeautifulSoup/Selenium + limpeza com pandas.
-- [ ] Pipeline agendado (madrugada) com detecção de duplicados.
+- [x] `scraper.py` com BeautifulSoup + registry de adapters + `--dry-run` (adapters reais pendentes).
+- [x] Pipeline com detecção de duplicados (bairro+tipo+valores) — agendamento noturno pendente.
 
 ### 4.5 Segurança e Qualidade
-- [ ] Auditoria final das regras do Firestore (testar tentativas de escrita por `leitor`).
+- [x] Auditoria das regras do Firestore (testes no emulador: `tests/rules/`) — 11/11 passando.
 - [ ] Rate limiting e validação de payload na ingestão.
-- [ ] Testes unitários do `estrutura.py` (casos de R$, acentos, variações de texto).
+- [x] Testes unitários do `estrutura.py` (casos de R$, acentos, variações de texto) — 34 testes.
 - [ ] Testes E2E do fluxo de busca (Playwright).
 
 ### 4.5.1 Automação de testes (decorrente da Sprint 5)
-- [ ] Setup de `pytest` no backend (`backend/tests/`).
-- [ ] `test_estrutura.py` — normalizadores + bairro default + campos ausentes.
-- [ ] `test_firestore_repo.py` — mock de `salvar_imovel` (`criado_em`) e erro sem serviceAccount.
-- [ ] Setup do emulador Firestore (Firebase CLI) para testar `firestore.rules`.
+- [x] Setup de `pytest` no backend (`backend/tests/` + `pytest.ini`).
+- [x] `test_estrutura.py` — normalizadores + bairro default + campos ausentes.
+- [x] `test_firestore_repo.py` — mock de `salvar_imovel` (`criado_em`) e erro sem serviceAccount.
+- [x] Setup do emulador Firestore (Firebase CLI) para testar `firestore.rules` (`tests/rules/`).
 - [ ] Playwright: fluxo landing → cadastro → login → busca → copiar resumo → logout.
-- [ ] CI/CD: rodar pytest + build + Playwright no GitHub Actions.
+- [ ] CI/CD: rodar pytest + build + Playwright no GitHub Actions (pytest+build já; Playwright pendente).
 - [ ] Manter `docs/diagrams/05-matriz-testes.md` atualizado a cada sprint.
 
 ### 4.6 Operações e Observabilidade
-- [ ] Analytics no frontend (page views, buscas realizadas).
-- [ ] Logs estruturados no backend (ingestão: sucesso/falha por fonte).
-- [ ] CI/CD: build do frontend + `firebase deploy` via GitHub Actions.
+- [x] Analytics no frontend (eventos `busca`, `copiar_resumo`, `lead_enviado` via Firebase Analytics).
+- [x] Logs estruturados no backend (`logging` em ingest/server/scraper/captura/estrutura).
+- [x] CI/CD: build do frontend + `firebase deploy` via GitHub Actions.
 - [ ] Backup periódico do Firestore (exportação programada).
 
 ### 4.7 Go-Live
@@ -208,6 +246,10 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
 | 6 | Landing page integrada ao SPA com roteamento hash | Uma única build/deploy; sem custo extra de rota no hosting |
 | 7 | Workflows documentados em Mermaid (`docs/diagrams/`) | Diagramas versionáveis e renderizados nativamente no GitHub/VS Code |
 | 8 | Estudo de workflows recorrente e anterior aos testes | Garante fidelidade entre código, documentação e cenários de teste |
+| 9 | Filtro em memória para múltiplas características e faixa de valor | Evita explosão de índices compostos no MVP |
+| 10 | Ingestão por link/áudio reutilizando `requests`+`BeautifulSoup` e Groq | Uma única stack de captura → mesma normalização JSON |
+| 11 | `leads` com `create` público validado por campos | Captação na landing sem login, sem expor dados |
+| 12 | Testes de regras via emulador (`tests/rules/`) | Valida `firestore.rules` sem tocar produção |
 
 ---
 
@@ -225,6 +267,12 @@ npm run build          # produção (gera dist/)
 firebase login
 firebase deploy        # hosting + firestore (rules e índices)
 
+# Testes
+cd backend && python -m pytest tests/ -v            # unitários (34)
+cd tests/rules && npm install                        # uma vez
+# (com JAVA_HOME apontando para JDK 21)
+firebase emulators:exec --only firestore "node tests/rules/test-rules.mjs"
+
 # Backend
 cd backend
 python -m venv .venv && .venv\Scripts\activate
@@ -232,6 +280,10 @@ pip install -r requirements.txt
 cp .env.example .env   # preencher GROQ_API_KEY
 python seed.py         # popular base
 python ingest.py --entrada "Casa com energia solar no centro, aluguel 2500"
+python ingest.py --link "https://exemplo.com/imovel/123"
+python ingest.py --audio caminho/audio.mp3
+python server.py       # endpoint HTTP (GET /health, POST /ingestir)
+python scraper.py --site exemplo --dry-run
 python add_admin.py --uid <UID> --email <email> [--role admin|owner|leitor]
 ```
 
