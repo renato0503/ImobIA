@@ -33,6 +33,18 @@ service cloud.firestore {
       allow create, update, delete: if ehAdmin();
     }
 
+    // Captação de leads (formulário público da landing).
+    // Permite criar sem login, mas valida os campos e veta a reescrita/leitura pública.
+    match /leads/{leadId} {
+      allow create: if
+        request.resource.data.keys().hasOnly(['nome', 'email', 'telefone', 'criado_em']) &&
+        request.resource.data.nome is string &&
+        request.resource.data.nome.size() > 0 &&
+        request.resource.data.email is string &&
+        request.resource.data.email.matches('.*@.*');
+      allow read, update, delete: if ehAdmin();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

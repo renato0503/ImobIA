@@ -1,8 +1,15 @@
 """Estrutura texto/áudio solto em JSON padronizado usando a API do Groq."""
 
 import json
+import logging
+import unicodedata
+
 from groq import Groq
 from config import GROQ_API_KEY, GROQ_MODEL
+
+logger = logging.getLogger(__name__)
+
+MODELO_TRANSCRICAO = "whisper-large-v3"
 
 TIPOS_VALIDOS = [
     "Casa",
@@ -95,14 +102,64 @@ def _normalizar(dados: dict) -> dict:
     return norm
 
 
+def transcrever_audio(caminho: str) -> str:
+    """Transcreve um arquivo de áudio usando a API de transcrição do Groq.
+
+    Retorna o texto transcrito, pronto para ser estruturado como imóvel.
+    """
+    if not GROQ_API_KEY:
+        raise RuntimeError(
+            "GROQ_API_KEY não definida. Configure no backend/.env "
+            "(veja .env.example)."
+        )
+
+    client = Groq(api_key=GROQ_API_KEY)
+    with open(caminho, "rb") as f:
+        resposta = client.audio.transcriptions.create(
+            file=(caminho, f),
+            model=MODELO_TRANSCRICAO,
+            response_format="text",
+            language="pt",
+        )
+
+    texto = resposta.text if hasattr(resposta, "text") else str(resposta)
+    logger.info("Áudio transcrito (%d caracteres)", len(texto))
+    return texto.strip()
+
+
+def _sem_acento(texto: str) -> str:
+    """Remove acentos e normaliza o texto para comparação robusta."""
+    return (
+        unicodedata.normalize("NFKD", texto)
+        .encode("ascii", "ignore")
+        .decode("ascii")
+        .lower()
+    )
+
+
 def _normalizar_tipo(valor) -> str:
     texto = str(valor or "").strip()
     if not texto:
         return "Imóvel"
-    texto_lower = texto.lower()
+    texto_norm = _sem_acento(texto)
+
+    # Match exato (ou completo do tipo dentro do texto)
     for tipo in TIPOS_VALIDOS:
-        if tipo.lower() in texto_lower or texto_lower in tipo.lower():
+        if texto_norm == _sem_acento(tipo):
             return tipo
+
+    # Prioriza tipos multi-palavra (ex: "casa em condomínio") por
+    # comprimento decrescente para não casar parcial com tipos menores.
+    tipos_por_comprimento = sorted(TIPOS_VALIDOS, key=len, reverse=True)
+    for tipo in tipos_por_comprimento:
+        if _sem_acento(tipo) in texto_norm:
+            return tipo
+
+    # Texto contido num tipo (ex: "casa" -> "Casa")
+    for tipo in TIPOS_VALIDOS:
+        if texto_norm in _sem_acento(tipo):
+            return tipo
+
     return texto.title()
 
 
