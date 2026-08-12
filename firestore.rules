@@ -1,0 +1,18 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function autenticado() {
+      return request.auth != null;
+    }
+
+    match /imoveis/{imovelId} {
+      allow read: if autenticado();
+      allow create: if autenticado();
+      allow update, delete: if autenticado();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

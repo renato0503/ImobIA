@@ -1,0 +1,55 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "imoveis",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tipo", "order": "ASCENDING" },
+        { "fieldPath": "criado_em", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "imoveis",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "bairro", "order": "ASCENDING" },
+        { "fieldPath": "criado_em", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "imoveis",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "finalidade", "order": "ASCENDING" },
+        { "fieldPath": "criado_em", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "imoveis",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "finalidade", "order": "ASCENDING" },
+        { "fieldPath": "tipo", "order": "ASCENDING" },
+        { "fieldPath": "criado_em", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "imoveis",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "bairro", "order": "ASCENDING" },
+        { "fieldPath": "tipo", "order": "ASCENDING" },
+        { "fieldPath": "criado_em", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "imoveis",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "caracteristicas", "order": "ASCENDING" },
+        { "fieldPath": "criado_em", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
