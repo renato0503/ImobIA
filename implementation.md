@@ -202,6 +202,21 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
 - **Manifest PWA:** ícones 192/512 + símbolo (any) + letreiro (any).
 - **E2E:** 8/8 passando (o teste A1 flakou uma vez por `ERR_ABORTED` transitório; passou no rerun).
 
+### Sprint 15 — Redesign da Landing Page (Design System)
+- **Tokens (`:root`):** paleta navy/teal/orange (60-30-10), fontes Sora+Inter (Google Fonts),
+  escala tipográfica 14–40, espaçamento em grid de 8px, radius card 16 / control 12 / pill 999,
+  sombra de card especificada. Tokens legados do app (login/dashboard) **preservados**.
+- **Estrutura `landing.ts`:** hero em grid 2 colunas (texto à esquerda + painel de chips à direita);
+  badge "Em desenvolvimento" (laranja + texto navy) no header; aria-labels, `aria-labelledby`,
+  `role="status"` no formulário; HTML semântico `header/main/section/footer`.
+- **CSS `lp-*`:** botões próprios da landing (`lp-btn-primary` teal, `lp-btn-outline` navy);
+  chips pill; cards radius 16 + sombra; passos 1-2-3; inputs radius 12 com foco visível;
+  seções 96px desktop / 64px mobile; container 1120px + 24px inline; grids com gap 24px.
+- **Proibido aplicado:** sem gradiente no hero, sem fundo laranja com texto branco, sem sombra no logo.
+- **Sem invenção de conteúdo:** nenhuma métrica, depoimento, parceiro ou feature nova foi adicionada.
+- **Validação:** build OK; estilos verificados por script (tokens aplicados em desktop/mobile);
+  8/8 E2E passando.
+
 ---
 
 ## 3. Sprint Atual (Consolidação — etapa final)
