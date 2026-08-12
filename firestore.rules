@@ -1,14 +1,36 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // UID raiz: gestor.renatorosa@gmail.com (primeiro admin / owner)
+    function ownerUid() {
+      return 'ef6Nu3M7FMRjaSmmTSvGlfOOiQI3';
+    }
+
     function autenticado() {
       return request.auth != null;
     }
 
+    // Usuário é admin se for o owner OU tiver doc na coleção 'usuarios' com role admin/owner
+    function ehAdmin() {
+      return autenticado() && (
+        request.auth.uid == ownerUid() ||
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role in ['admin', 'owner']
+      );
+    }
+
+    // Coleção de usuários/papéis: cada doc tem uid como id, ex: { role: 'admin', email: '...' }
+    match /usuarios/{uid} {
+      allow read: if autenticado();
+      allow create: if autenticado() && (
+        request.auth.uid == uid ||
+        ehAdmin()
+      );
+      allow update, delete: if ehAdmin();
+    }
+
     match /imoveis/{imovelId} {
       allow read: if autenticado();
-      allow create: if autenticado();
-      allow update, delete: if autenticado();
+      allow create, update, delete: if ehAdmin();
     }
 
     match /{document=**} {

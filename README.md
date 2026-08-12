@@ -45,9 +45,12 @@ ImobIA/
 
 ```bash
 cd frontend
+cp .env.example .env   # preencha com as credenciais do seu projeto Firebase
 npm install
 npm run dev
 ```
+
+> As credenciais do Firebase ficam em `frontend/.env` (não versionado). A `apiKey` do Firebase é pública por design (proteção real vem das regras do Firestore), mas o GitHub a detecta como segredo, então ela não fica no repositório.
 
 Para build de produção:
 
