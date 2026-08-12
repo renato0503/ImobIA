@@ -99,7 +99,33 @@ def _normalizar(dados: dict) -> dict:
 
     fotos = dados.get("fotos")
     norm["fotos"] = fotos if isinstance(fotos, list) else []
+    _adicionar_booleanos_caracteristicas(norm)
     return norm
+
+
+def _adicionar_booleanos_caracteristicas(norm: dict) -> None:
+    """Deriva campos booleanos tem_* de cada característica para buscas nativas.
+
+    O Firestore não permite múltiplos `array-contains` no mesmo campo em uma query.
+    Para permitir buscar por várias características de forma nativa (ex: energia
+    solar + quintal), gravamos um campo booleano por característica:
+    `tem_energia_solar: true`, `tem_quintal: true`.
+    """
+    for caracteristica in norm.get("caracteristicas", []):
+        slug = slug_de_caracteristica(caracteristica)
+        if slug:
+            norm[f"tem_{slug}"] = True
+
+
+def slug_de_caracteristica(caracteristica: str) -> str:
+    """Converte 'energia solar' → 'energia_solar'; '3 quartos' → '3_quartos'."""
+    sem_acento = (
+        unicodedata.normalize("NFKD", caracteristica)
+        .encode("ascii", "ignore")
+        .decode("ascii")
+    )
+    slug = "_".join(sem_acento.lower().split())
+    return slug
 
 
 def transcrever_audio(caminho: str) -> str:

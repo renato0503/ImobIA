@@ -4,3 +4,4 @@ serviceAccount.json
 *.pyc
 .venv/
 venv/
+backups/

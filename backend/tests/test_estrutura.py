@@ -125,3 +125,26 @@ class TestNormalizarCompleto:
         )
         assert norm["contato_nome"] == "João"
         assert norm["contato_telefone"] == "(11) 99999-9999"
+
+    def test_booleanos_tem_derivados(self):
+        norm = _normalizar({"caracteristicas": ["Energia Solar", "3 quartos"]})
+        assert norm["tem_energia_solar"] is True
+        assert norm["tem_3_quartos"] is True
+        assert "tem_piscina" not in norm
+
+
+class TestSlugCaracteristica:
+    def test_slug_simples(self):
+        from estrutura import slug_de_caracteristica
+
+        assert slug_de_caracteristica("energia solar") == "energia_solar"
+
+    def test_slug_sem_acento(self):
+        from estrutura import slug_de_caracteristica
+
+        assert slug_de_caracteristica("Condomínio fechado") == "condominio_fechado"
+
+    def test_slug_numeros(self):
+        from estrutura import slug_de_caracteristica
+
+        assert slug_de_caracteristica("3 quartos") == "3_quartos"
