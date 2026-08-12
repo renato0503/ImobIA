@@ -197,16 +197,20 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
 
 ### Em andamento / faltando
 
-1. **Exposição pública do backend** (hosting `server.py` em Cloud Run/Cloud Functions) — hoje roda local.
-2. **Configuração real do WhatsApp** (Twilio/Meta) apontando para o webhook.
-3. **Galeria de fotos** (navegação entre fotos no card).
+1. **Configuração real do WhatsApp** (Twilio/Meta) apontando para o webhook — **o backend roda localmente
+   (custo zero)**, então o webhook só funciona enquanto o `server.py` estiver em execução.
+2. **Galeria de fotos** (navegação entre fotos no card).
+
+> **Decisão de produto (ADR):** o backend NÃO será publicado em Cloud Run/Functions. Tudo permanece
+> no free tier (ver `context.md` §6). O webhook WhatsApp pode ser usado via túnel local ou agendador
+> em máquina própria, sem infra paga.
 
 ### Desafios técnicos em aberto
 
 | Desafio | Impacto | Status |
 |---------|---------|--------|
 | Queries com múltiplos `array-contains` | Exigem índice composto + filtro em memória | Contornado (usa 1 característica na query) |
-| Backend não está publicado | Webhook WhatsApp só funciona localmente | Backlog |
+| Webhook WhatsApp depende do `server.py` local | Só responde enquanto o backend está de pé | Decisão: manter local (custo zero) |
 | Galeria de fotos (navegação) | Só exibe a primeira foto + contagem | Backlog |
 
 ---
@@ -220,7 +224,7 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
 - [x] Validar busca real no console e criar índices compostos pendentes. *(6 índices ativados; busca com filtro validada no E2E)*
 
 ### 4.2 Ingestão por IA (Fase 2)
-- [x] **Webhook WhatsApp** (`POST /whatsapp` estilo Twilio) — texto/áudio → ingestão + resposta TwiML. *(publicação do backend em nuvem pendente)*
+- [x] **Webhook WhatsApp** (`POST /whatsapp` estilo Twilio) — texto/áudio → ingestão + resposta TwiML. *(roda local, custo zero — publicar em nuvem foi descartado por decisão de produto)*
 - [x] **Transcrição de áudio:** `estrutura.transcrever_audio()` via Groq (`whisper-large-v3`) + `ingest.py --audio`.
 - [x] **Ingestão por link real:** `captura.py` baixa a URL e extrai título/OG/descrição/parágrafos.
 - [x] Endpoint HTTP (`server.py` — Flask) com `GET /health` e `POST /ingestir` (texto/url/audio).
@@ -291,6 +295,7 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
 | 12 | Testes de regras via emulador (`tests/rules/`) | Valida `firestore.rules` sem tocar produção |
 | 13 | Webhook WhatsApp estilo Twilio (`POST /whatsapp`) | Compatível com provedores (Twilio/Meta) sem acoplar SDK |
 | 14 | Storage com regras espelhando papéis do Firestore | Consistência de autorização entre banco e arquivos |
+| 15 | **Backend 100% local (sem Cloud Run/Functions)** | Custo zero; ingestão/scraping sob demanda |
 
 ---
 

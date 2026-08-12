@@ -3,6 +3,7 @@
 > **Status:** v0.1 (MVP em produção)
 > **URL:** https://imobia.web.app
 > **Repositório:** https://github.com/renato0503/ImobIA
+> **Estratégia de custo:** 100% free tier (custo zero)
 
 ---
 
@@ -180,3 +181,36 @@ Criar um **agregador imobiliário centralizado e inteligente** que:
 
 **Caso 4 — Automação noturna (Futuro)**
 > Um scraper roda de madrugada em sites-alvo, extrai novos anúncios, limpa com pandas e sincroniza no Firestore.
+
+---
+
+## 6. Estratégia de Custo Zero (Free Tier)
+
+> **Decisão do produto:** o ImobIA deve operar **100% dentro dos tiers gratuitos**.
+> Nada de serviços pagos ou servidores sempre-on.
+
+### Como o custo se mantém zero
+
+| Camada | Recurso | Free tier | Como usamos |
+|--------|---------|-----------|-------------|
+| Frontend | Firebase Hosting | Gratuito (storage + banda) | Build estático do Vite, PWA, SSL |
+| Banco | Firestore | 1 GiB, 50k reads/dia, 20k writes/dia | Coleções `imoveis`, `usuarios`, `leads` |
+| Auth | Firebase Authentication | Gratuito (e-mail/senha) | Login/cadastro por e-mail e senha |
+| Storage | Cloud Storage | 5 GiB, 1M ops/dia | Fotos dos imóveis |
+| Analytics | Firebase Analytics | Gratuito | Eventos de busca e leads |
+| Ingestão IA | Groq (external) | Tiers gratuitos próprios da API | Estruturação de texto/áudio |
+| Backend | Python (local/CLI) | Sem infra | `ingest.py`/`server.py` rodam sob demanda |
+
+### Regras para permanecer custo zero
+
+1. **Backend nunca roda em servidor pago.** Ingestão, scraping e webhook WhatsApp executam
+   localmente/sob demanda (`python server.py` / `python ingest.py`). Nada de Cloud Run/Functions.
+2. **Groq** é a única dependência externa paga; usar somente o tier gratuito da API.
+3. **Orçamento de proteção:** foi criado um orçamento de **US$ 1/mês** no Google Cloud
+   (projeto `imobia-65bda`) com alertas em 50%, 90% e 100% — qualquer gasto além do free tier
+   dispara notificação.
+4. **Sem APIs/features que exijam Blaze além do necessário** (ex: Cloud Functions, Vertex, etc.).
+5. **Alertas de quota** (Console Firebase → Uso) monitoram Firestore/Storage antes de atingir limites.
+
+> O plano da conta é **Blaze**, mas o Blaze só cobra *além* do free tier. Enquanto o uso
+> permanecer dentro das cotas acima, o custo é **R$ 0**.
