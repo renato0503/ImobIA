@@ -1,0 +1,41 @@
+rules_version = '2';
+
+// Regras do Cloud Storage para o ImobIA.
+// Estrutura: imoveis/{imovelId}/{arquivo}
+//   - Leitura: qualquer usuário autenticado (fotos aparecem nos cards).
+//   - Escrita: apenas admin/owner (mesma lógica de papéis do Firestore).
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function autenticado() {
+      return request.auth != null;
+    }
+
+    // UID raiz (owner bootstrap)
+    function ownerUid() {
+      return 'ef6Nu3M7FMRjaSmmTSvGlfOOiQI3';
+    }
+
+    function ehAdmin() {
+      return autenticado() && (
+        request.auth.uid == ownerUid() ||
+        firestore.get(/databases/(default)/documents/usuarios/$(request.auth.uid)).data.role in ['admin', 'owner']
+      );
+    }
+
+    // Bloqueia tudo por padrão
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // Fotos dos imóveis: imoveis/{imovelId}/{nomeArquivo}
+    match /imoveis/{imovelId}/{nomeArquivo} {
+      allow read: if autenticado();
+      allow write: if ehAdmin() && (
+        request.resource == null ||
+        request.resource.size < 5 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*')
+      );
+    }
+  }
+}
