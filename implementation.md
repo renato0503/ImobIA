@@ -165,19 +165,18 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
 - ✅ Base populada (seed com 4 imóveis), admin criado como `owner`.
 - ✅ **Playwright E2E — 7 cenários passando contra produção** (landing, login, senha errada, busca com filtro, copiar resumo, sair).
 - ✅ Secrets do GitHub Actions configurados (service account + VITE_FIREBASE_* + credenciais E2E).
+- ✅ **Índices compostos ativados no console** — os 6 índices de `firestore.indexes.json` estão `Ativado`; busca com filtro validada no E2E (B2b).
 
 ### Em andamento / faltando
 
-1. **Validar índices compostos** na primeira busca combinada real no console (aceitar sugestões do Firestore).
-2. **Rate limiting e validação de payload** na ingestão.
-3. **Upload de fotos** via Firebase Storage + renderização nos cards.
-4. **Integração WhatsApp** (bot apontando para `POST /ingestir`).
+1. **Rate limiting e validação de payload** na ingestão.
+2. **Upload de fotos** via Firebase Storage + renderização nos cards.
+3. **Integração WhatsApp** (bot apontando para `POST /ingestir`).
 
 ### Desafios técnicos em aberto
 
 | Desafio | Impacto | Status |
 |---------|---------|--------|
-| Índices adicionais exigidos pelo Firestore | Buscas combinadas podem falhar no console | Verificar ao rodar a 1ª busca combinada |
 | Queries com múltiplos `array-contains` | Exigem índice composto + filtro em memória | Contornado (usa 1 característica na query) |
 | Integração WhatsApp | Automação de captação via mensagem | Backlog |
 | Upload de fotos | Cards sem galeria | Backlog |
@@ -190,7 +189,7 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
 - [x] Gerar chave privada no Firebase Console e salvar em `backend/serviceAccount.json`. *(feito via `gcloud iam service-accounts keys create`)*
 - [x] Executar `python seed.py` para popular a coleção `imoveis`. *(4 imóveis de exemplo gravados)*
 - [x] Criar documento do admin na coleção `usuarios` (`python add_admin.py --uid ef6Nu3M7FMRjaSmmTSvGlfOOiQI3 --email gestor.renatorosa@gmail.com`). *(criado como `owner`)*
-- [ ] Validar busca real no console e criar índices compostos pendentes.
+- [x] Validar busca real no console e criar índices compostos pendentes. *(6 índices ativados; busca com filtro validada no E2E)*
 
 ### 4.2 Ingestão por IA (Fase 2)
 - [ ] **Integração WhatsApp (Twilio/Cloud Functions):** receber mensagem de áudio/texto e disparar a ingestão.
