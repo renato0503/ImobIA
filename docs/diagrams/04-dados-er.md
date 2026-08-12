@@ -86,3 +86,16 @@ flowchart TD
 - `finalidade` é **string** → busca por `in` (`['venda','ambos']` ou `['aluguel','ambos']`).
 - O ID de `usuarios` é o **UID** do Firebase Auth (add_admin usa `document(uid).set(merge=True)`).
 - `criado_em` em milissegundos para casar frontend (`types.ts`) e backend (`firestore_repo.py`).
+- `fotos` é um **array de URLs** (Storage). As regras de `storage.rules` espelham os papéis:
+  leitura autenticada; escrita admin/owner; tamanho máx 5 MB; `image/*`.
+
+## Cloud Storage (fotos)
+
+```mermaid
+flowchart LR
+  subgraph storage["storage.rules — imoveis/{imovelId}/{arquivo}"]
+    R1["read: autenticado()"] --> R2["allow"]
+    W1["write: ehAdmin() e size < 5MB e image/*"] --> W2["allow"]
+    R3["demais"] --> R4["deny"]
+  end
+```

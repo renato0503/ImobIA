@@ -1,15 +1,19 @@
 import { db } from './firebase';
-import { auth, analytics } from './firebase';
+import { auth, analytics, storage } from './firebase';
 import {
   buscarImoveis,
   listarBairros,
   PAGINA_PADRAO,
   type BuscaFiltros,
 } from './services/imoveis';
+import { enviarFoto, ErroFoto } from './services/fotos';
+import { ehAdmin } from './services/usuarios';
+import { updateDoc, doc } from 'firebase/firestore';
 import type { Imovel } from './types';
 import { entrarComEmail, criarConta, sair } from './main';
 
 let ultimosResultados: Imovel[] = [];
+let usuarioAdmin = false;
 
 const estadoFiltros: BuscaFiltros = {
   caracteristicas: [],
@@ -71,10 +75,15 @@ export function renderLogin() {
 }
 
 export function renderDashboard() {
+  ehAdmin(db).then((admin) => {
+    usuarioAdmin = admin;
+  });
+
   app.innerHTML = `
     <header class="topbar">
       <h1 class="logo">🏠 ImobIA</h1>
       <div class="topbar-actions">
+        ${usuarioAdmin ? '<span class="tag finalidade">Admin</span>' : ''}
         <button id="btn-copiar-resumo" class="btn btn-outline">Copiar resumo</button>
         <button id="btn-sair" class="btn btn-ghost">Sair</button>
       </div>
@@ -236,6 +245,37 @@ export function renderDashboard() {
   executarBusca();
 }
 
+// Delegação de evento para os inputs de foto (os cards são re-renderizados).
+document.addEventListener('change', async (ev) => {
+  const input = ev.target as HTMLInputElement;
+  if (!input.classList.contains('foto-input')) return;
+
+  const imovelId = input.dataset.id;
+  const arquivo = input.files?.[0];
+  if (!imovelId || !arquivo) return;
+
+  mostrarToast('Enviando foto...');
+  try {
+    const url = await enviarFoto(storage, imovelId, arquivo);
+
+    // Anexa a URL ao array 'fotos' do imóvel no Firestore
+    const imovel = ultimosResultados.find((i) => i.id === imovelId);
+    const fotos = [...(imovel?.fotos ?? []), url];
+    await updateDoc(doc(db, 'imoveis', imovelId), { fotos });
+
+    registrarEvento('foto_upload', { imovelId });
+    mostrarToast('Foto adicionada!');
+    executarBusca();
+  } catch (err) {
+    console.error(err);
+    mostrarToast(
+      err instanceof ErroFoto ? err.message : 'Não foi possível enviar a foto.'
+    );
+  } finally {
+    input.value = '';
+  }
+});
+
 async function carregarBairros() {
   try {
     const bairros = await listarBairros(db);
@@ -289,7 +329,8 @@ function renderCards(el: HTMLElement, imoveis: Imovel[], acrescentar = false) {
 
   const html = imoveis
     .map((im) => {
-      const foto = im.fotos && im.fotos.length > 0 ? im.fotos[0] : null;
+      const fotos = im.fotos ?? [];
+      const foto = fotos.length > 0 ? fotos[0] : null;
       const valor = im.finalidade === 'aluguel'
         ? im.valor_aluguel
         : im.finalidade === 'venda'
@@ -306,6 +347,11 @@ function renderCards(el: HTMLElement, imoveis: Imovel[], acrescentar = false) {
             foto
               ? `<img src="${foto}" alt="${im.tipo}" loading="lazy" />`
               : '<div class="sem-foto">Sem foto</div>'
+          }
+          ${
+            fotos.length > 1
+              ? `<span class="foto-contagem">${fotos.length} 📷</span>`
+              : ''
           }
         </div>
         <div class="card-corpo">
@@ -333,6 +379,13 @@ function renderCards(el: HTMLElement, imoveis: Imovel[], acrescentar = false) {
           }
           <div class="card-acoes">
             <button class="btn btn-small copy-one" onclick="window.copiarUm('${im.id}')">📋 Copiar resumo</button>
+            ${
+              usuarioAdmin
+                ? `<label class="btn btn-small upload-foto" data-id="${im.id}">📷 Adicionar foto
+                     <input type="file" accept="image/*" class="foto-input" data-id="${im.id}" hidden />
+                   </label>`
+                : ''
+            }
           </div>
         </div>
       </article>

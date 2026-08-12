@@ -195,6 +195,24 @@ select:focus {
   object-fit: cover;
   display: block;
 }
+.card-foto {
+  position: relative;
+}
+.foto-contagem {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+}
+.upload-foto {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
 .sem-foto {
   height: 180px;
   display: flex;

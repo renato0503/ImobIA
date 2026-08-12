@@ -13,8 +13,8 @@
 | 0 | Arquitetura macro (C4) | `00-arquitetura.md` | Visão de sistema e limites |
 | 1 | Autenticação | `01-auth-workflow.md` | Landing → login/cadastro → dashboard |
 | 2 | Busca de imóveis | `02-busca-workflow.md` | Filtros → query Firestore → cards |
-| 3 | Ingestão por IA | `03-ingestao-workflow.md` | Texto/link → Groq → normalização → Firestore |
-| 4 | Modelo de dados | `04-dados-er.md` | Coleções `imoveis` e `usuarios` |
+| 3 | Ingestão por IA | `03-ingestao-workflow.md` | Texto/link → Groq → normalização → Firestore; webhook WhatsApp |
+| 4 | Modelo de dados | `04-dados-er.md` | Coleções `imoveis`, `usuarios`, `leads` + Storage |
 | 5 | Matriz de testes | `05-matriz-testes.md` | Cenários por workflow (recorrente) |
 
 ## Como usar

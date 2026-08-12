@@ -82,6 +82,38 @@ sequenceDiagram
   S-->>B: 201 { ok: true, id, imovel }
 ```
 
+## Webhook WhatsApp (`POST /whatsapp`)
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant W as Twilio/Meta (WhatsApp)
+  participant S as server.py
+  participant C as captura.py
+  participant E as estrutura.py
+  participant G as Groq API
+  participant R as firestore_repo.py
+
+  W->>S: POST /whatsapp (form-urlencoded)
+  Note over S: From, Body, NumMedia, MediaUrl0, MediaContentType0
+  S->>S: limiter (60/min) + parse do payload
+  alt NumMedia=0 (texto)
+    S->>S: validar_texto(Body)
+  else áudio (MediaContentType0 contém 'audio')
+    S->>S: baixa MediaUrl0 → arquivo temporário
+    S->>E: transcrever_audio(caminho)
+  else outra mídia (imagem)
+    S-->>W: TwiML "Envie um texto ou áudio..."
+  end
+  S->>E: estruturar_imovel(conteudo)
+  E->>G: chat.completions.create(...)
+  G-->>E: JSON
+  E-->>S: imovel normalizado
+  S->>R: salvar_imovel(imovel)
+  R-->>S: imovel_id
+  S-->>W: TwiML "Imóvel cadastrado! ... ID: <id>"
+```
+
 ## Fluxo de decisão (ingestão)
 
 ```mermaid

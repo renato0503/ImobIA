@@ -148,6 +148,31 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
 - **CI:** novo job `e2e` no `.github/workflows/ci.yml` (Playwright contra produção antes do deploy);
   deploy agora depende de pytest + build + e2e.
 
+### Sprint 12 — Rate Limiting, Payload, Fotos e WhatsApp
+- **Rate limiting (`server.py`):** `flask-limiter` com limites configuráveis por env
+  (`INGESTIR_LIMITE="30 per minute"`, `WHATSAPP_LIMITE="60 per minute"`); storage em memória por padrão
+  (Redis configurável via `RATE_LIMIT_STORAGE`).
+- **Validação de payload (`validacao.py`):**
+  - `validar_texto` — obrigatório, não vazio, máx 6000 caracteres.
+  - `validar_url` — apenas http/https com domínio.
+  - `validar_audio` — extensões suportadas (mp3/m4a/wav/ogg/opus).
+  - `validar_payload` — aceita apenas um de `texto`/`url`/`audio`.
+  - Aplicada em `POST /ingestir`.
+- **Correção:** bug no parse de `API_TOKENS` (iterava a string caractere a caractere; adicionado `.split(",")`).
+- **Endpoint `/whatsapp` (webhook estilo Twilio):** aceita `form-urlencoded` ou JSON com
+  `From/Body/NumMedia/MediaUrl0/MediaContentType0`; texto → ingestão direta; áudio → baixa `MediaUrl`,
+  transcreve via Groq e ingere; imagem → resposta orientando a enviar texto/áudio. Respostas em TwiML.
+- **Cloud Storage:**
+  - `storage.rules` — leitura autenticada; escrita admin/owner (mesma lógica de papéis), tamanho máx 5 MB,
+    contentType `image/*`. Deployado.
+  - `firebase.json` inclui `storage.rules`.
+- **Upload de fotos (frontend):**
+  - `services/fotos.ts` — `enviarFoto` (valida tipo/tamanho, faz upload e retorna URL) e `removerFoto`.
+  - `services/usuarios.ts` — `ehAdmin()` (owner raiz + doc `usuarios/{uid}.role`).
+  - Cards mostram contagem de fotos e, para admins, botão "Adicionar foto" (upload → atualiza array `fotos`).
+  - Badge "Admin" no topbar quando aplicável.
+- **Testes:** +30 cenários (`test_validacao.py` e `test_server.py` com Flask test client + mocks) → **71 passando**.
+
 ---
 
 ## 3. Sprint Atual (Consolidação — etapa final)
@@ -157,7 +182,7 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
 
 ### Já concluído nesta fase
 
-- ✅ Testes unitários do backend (pytest) — **34 passando**.
+- ✅ Testes unitários do backend (pytest) — **71 passando**.
 - ✅ Regras do Firestore validadas no emulador (rules-unit-testing) — **11 passando**.
 - ✅ Ingestão por link, áudio e endpoint HTTP; scraper com detecção de duplicados.
 - ✅ Busca com faixa de valor, ordenação, paginação e autocomplete de bairros.
@@ -166,20 +191,23 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
 - ✅ **Playwright E2E — 7 cenários passando contra produção** (landing, login, senha errada, busca com filtro, copiar resumo, sair).
 - ✅ Secrets do GitHub Actions configurados (service account + VITE_FIREBASE_* + credenciais E2E).
 - ✅ **Índices compostos ativados no console** — os 6 índices de `firestore.indexes.json` estão `Ativado`; busca com filtro validada no E2E (B2b).
+- ✅ **Rate limiting e validação de payload** em `POST /ingestir` (`validacao.py` + `flask-limiter`).
+- ✅ **Upload de fotos** — Storage habilitado + `storage.rules` + botão admin nos cards.
+- ✅ **Webhook WhatsApp** (`POST /whatsapp`) — texto/áudio → ingestão, resposta TwiML.
 
 ### Em andamento / faltando
 
-1. **Rate limiting e validação de payload** na ingestão.
-2. **Upload de fotos** via Firebase Storage + renderização nos cards.
-3. **Integração WhatsApp** (bot apontando para `POST /ingestir`).
+1. **Exposição pública do backend** (hosting `server.py` em Cloud Run/Cloud Functions) — hoje roda local.
+2. **Configuração real do WhatsApp** (Twilio/Meta) apontando para o webhook.
+3. **Galeria de fotos** (navegação entre fotos no card).
 
 ### Desafios técnicos em aberto
 
 | Desafio | Impacto | Status |
 |---------|---------|--------|
 | Queries com múltiplos `array-contains` | Exigem índice composto + filtro em memória | Contornado (usa 1 característica na query) |
-| Integração WhatsApp | Automação de captação via mensagem | Backlog |
-| Upload de fotos | Cards sem galeria | Backlog |
+| Backend não está publicado | Webhook WhatsApp só funciona localmente | Backlog |
+| Galeria de fotos (navegação) | Só exibe a primeira foto + contagem | Backlog |
 
 ---
 
@@ -192,7 +220,7 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
 - [x] Validar busca real no console e criar índices compostos pendentes. *(6 índices ativados; busca com filtro validada no E2E)*
 
 ### 4.2 Ingestão por IA (Fase 2)
-- [ ] **Integração WhatsApp (Twilio/Cloud Functions):** receber mensagem de áudio/texto e disparar a ingestão.
+- [x] **Webhook WhatsApp** (`POST /whatsapp` estilo Twilio) — texto/áudio → ingestão + resposta TwiML. *(publicação do backend em nuvem pendente)*
 - [x] **Transcrição de áudio:** `estrutura.transcrever_audio()` via Groq (`whisper-large-v3`) + `ingest.py --audio`.
 - [x] **Ingestão por link real:** `captura.py` baixa a URL e extrai título/OG/descrição/parágrafos.
 - [x] Endpoint HTTP (`server.py` — Flask) com `GET /health` e `POST /ingestir` (texto/url/audio).
@@ -201,7 +229,7 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
 - [x] Autocomplete de bairros a partir dos dados reais do banco (popula `<datalist>`).
 - [ ] Suporte a múltiplas características na query nativa (revisar índices).
 - [x] Filtrar por faixa de valor (mín/máx) e ordenação.
-- [ ] Upload de fotos via Firebase Storage + renderização nos cards.
+- [x] Upload de fotos via Firebase Storage + renderização nos cards (contagem + botão admin).
 - [x] Paginação/`load more` para acervos grandes.
 
 ### 4.3.1 Landing Page (Marketing)
@@ -218,8 +246,8 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
 
 ### 4.5 Segurança e Qualidade
 - [x] Auditoria das regras do Firestore (testes no emulador: `tests/rules/`) — 11/11 passando.
-- [ ] Rate limiting e validação de payload na ingestão.
-- [x] Testes unitários do `estrutura.py` (casos de R$, acentos, variações de texto) — 41 testes.
+- [x] Rate limiting (`flask-limiter`) e validação de payload (`validacao.py`) na ingestão.
+- [x] Testes unitários do `estrutura.py` (casos de R$, acentos, variações de texto) — 71 testes no total.
 - [x] Testes E2E do fluxo de busca (Playwright) — 7 cenários contra produção.
 
 ### 4.5.1 Automação de testes (decorrente da Sprint 5)
@@ -261,6 +289,8 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
 | 10 | Ingestão por link/áudio reutilizando `requests`+`BeautifulSoup` e Groq | Uma única stack de captura → mesma normalização JSON |
 | 11 | `leads` com `create` público validado por campos | Captação na landing sem login, sem expor dados |
 | 12 | Testes de regras via emulador (`tests/rules/`) | Valida `firestore.rules` sem tocar produção |
+| 13 | Webhook WhatsApp estilo Twilio (`POST /whatsapp`) | Compatível com provedores (Twilio/Meta) sem acoplar SDK |
+| 14 | Storage com regras espelhando papéis do Firestore | Consistência de autorização entre banco e arquivos |
 
 ---
 
@@ -293,9 +323,15 @@ python seed.py         # popular base
 python ingest.py --entrada "Casa com energia solar no centro, aluguel 2500"
 python ingest.py --link "https://exemplo.com/imovel/123"
 python ingest.py --audio caminho/audio.mp3
-python server.py       # endpoint HTTP (GET /health, POST /ingestir)
+python server.py       # endpoints: GET /health, POST /ingestir, POST /whatsapp
 python scraper.py --site exemplo --dry-run
 python add_admin.py --uid <UID> --email <email> [--role admin|owner|leitor]
+
+# Variáveis úteis do server (env):
+#   API_TOKENS="token1,token2"       # tokens Bearer (default: dev-token)
+#   INGESTIR_LIMITE="30 per minute"  # rate limit do /ingestir
+#   WHATSAPP_LIMITE="60 per minute"  # rate limit do /whatsapp
+#   RATE_LIMIT_STORAGE="memory://"   # ou "redis://localhost:6379"
 ```
 
 ## 7. Estudo de workflows (recorrente)
