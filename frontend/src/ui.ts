@@ -2,7 +2,7 @@ import { db } from './firebase';
 import { auth } from './firebase';
 import { buscarImoveis, type BuscaFiltros } from './services/imoveis';
 import type { Imovel } from './types';
-import { entrarGoogle, sairGoogle } from './main';
+import { entrarComEmail, criarConta, sair } from './main';
 
 let autenticado = false;
 
@@ -31,11 +31,52 @@ function renderLogin() {
       <div class="login-box">
         <h1 class="logo">🏠 ImobIA</h1>
         <p class="tagline">Agregador imobiliário inteligente</p>
-        <button id="btn-entrar" class="btn btn-primary btn-block">Entrar com Google</button>
+        <form id="form-login" novalidate>
+          <label class="campo">
+            <span>E-mail</span>
+            <input id="login-email" type="email" placeholder="seu@email.com" autocomplete="email" required />
+          </label>
+          <label class="campo">
+            <span>Senha</span>
+            <input id="login-senha" type="password" placeholder="••••••••" autocomplete="current-password" required />
+          </label>
+          <p id="login-erro" class="erro"></p>
+          <button type="submit" id="btn-entrar" class="btn btn-primary btn-block">Entrar</button>
+          <button type="button" id="btn-criar-conta" class="btn btn-ghost">Criar conta</button>
+        </form>
       </div>
     </div>
   `;
-  document.getElementById('btn-entrar')!.addEventListener('click', entrarGoogle);
+
+  const emailEl = document.getElementById('login-email') as HTMLInputElement;
+  const senhaEl = document.getElementById('login-senha') as HTMLInputElement;
+  const erroEl = document.getElementById('login-erro')!;
+  const form = document.getElementById('form-login') as HTMLFormElement;
+
+  const exibirErro = (msg: string) => {
+    erroEl.textContent = msg;
+  };
+
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const msg = await entrarComEmail(emailEl.value.trim(), senhaEl.value);
+    if (msg) {
+      exibirErro(msg);
+      return;
+    }
+    erroEl.textContent = '';
+    renderApp();
+  });
+
+  document.getElementById('btn-criar-conta')!.addEventListener('click', async () => {
+    const msg = await criarConta(emailEl.value.trim(), senhaEl.value);
+    if (msg) {
+      exibirErro(msg);
+      return;
+    }
+    erroEl.textContent = '';
+    renderApp();
+  });
 }
 
 function renderDashboard() {
@@ -164,7 +205,7 @@ function renderDashboard() {
     executarBusca();
   });
 
-  document.getElementById('btn-sair')!.addEventListener('click', sairGoogle);
+  document.getElementById('btn-sair')!.addEventListener('click', sair);
   document.getElementById('btn-copiar-resumo')!.addEventListener('click', copiarResumo);
 
   executarBusca();
