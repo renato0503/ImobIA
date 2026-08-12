@@ -4,7 +4,7 @@ import { buscarImoveis, type BuscaFiltros } from './services/imoveis';
 import type { Imovel } from './types';
 import { entrarComEmail, criarConta, sair } from './main';
 
-let autenticado = false;
+let ultimosResultados: Imovel[] = [];
 
 const estadoFiltros: BuscaFiltros = {
   caracteristicas: [],
@@ -13,19 +13,7 @@ const estadoFiltros: BuscaFiltros = {
 
 const app = document.getElementById('app')!;
 
-export function setAutenticado(val: boolean) {
-  autenticado = val;
-}
-
-export function renderApp() {
-  if (!autenticado) {
-    renderLogin();
-    return;
-  }
-  renderDashboard();
-}
-
-function renderLogin() {
+export function renderLogin() {
   app.innerHTML = `
     <div class="login">
       <div class="login-box">
@@ -65,7 +53,6 @@ function renderLogin() {
       return;
     }
     erroEl.textContent = '';
-    renderApp();
   });
 
   document.getElementById('btn-criar-conta')!.addEventListener('click', async () => {
@@ -75,11 +62,10 @@ function renderLogin() {
       return;
     }
     erroEl.textContent = '';
-    renderApp();
   });
 }
 
-function renderDashboard() {
+export function renderDashboard() {
   app.innerHTML = `
     <header class="topbar">
       <h1 class="logo">🏠 ImobIA</h1>
@@ -210,8 +196,6 @@ function renderDashboard() {
 
   executarBusca();
 }
-
-let ultimosResultados: Imovel[] = [];
 
 async function executarBusca() {
   const cardsEl = document.getElementById('cards')!;

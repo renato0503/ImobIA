@@ -7,12 +7,45 @@ import {
   signInWithEmailAndPassword,
   signOut,
 } from 'firebase/auth';
-import { renderApp, setAutenticado } from './ui';
+import { renderLogin, renderDashboard } from './ui';
+import { renderLanding } from './landing';
+
+let autenticado = false;
 
 onAuthStateChanged(auth, (usuario) => {
-  setAutenticado(!!usuario);
+  autenticado = !!usuario;
   renderApp();
 });
+
+window.addEventListener('hashchange', renderApp);
+
+export function renderApp() {
+  const rota = window.location.hash.replace('#', '') || '/';
+
+  if (rota === '/app') {
+    if (autenticado) {
+      renderDashboard();
+    } else {
+      renderLogin();
+    }
+    return;
+  }
+
+  renderLanding();
+}
+
+export function irParaApp() {
+  window.location.hash = '#/app';
+  renderApp();
+}
+
+declare global {
+  interface Window {
+    irParaApp: () => void;
+  }
+}
+
+window.irParaApp = irParaApp;
 
 export async function entrarComEmail(email: string, senha: string): Promise<string | null> {
   try {
@@ -34,6 +67,7 @@ export async function criarConta(email: string, senha: string): Promise<string |
 
 export async function sair() {
   await signOut(auth);
+  window.location.hash = '#/';
   renderApp();
 }
 
