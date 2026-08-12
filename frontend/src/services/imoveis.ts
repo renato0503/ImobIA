@@ -54,19 +54,30 @@ function construirQuery(db: Firestore, filtros: BuscaFiltros): QueryConstraint[]
     condicoes.push(where('bairro', '==', filtros.bairro));
   }
 
-  // Uma única característica é usada na query via array-contains.
-  // As demais são filtradas em memória para evitar índices compostos excessivos.
-  const charFiltro = filtros.caracteristicas[0];
-  if (charFiltro) {
-    condicoes.push(
-      where('caracteristicas', 'array-contains', charFiltro.toLowerCase())
-    );
+  // Múltiplas características: usamos os campos booleanos tem_<slug> gravados
+  // pelo backend (estrutura.py). Isso permite filtragem nativa com vários
+  // `where(..., '==', true)` + índice composto (declarado no firestore.indexes.json).
+  for (const c of filtros.caracteristicas) {
+    const slug = slugDeCaracteristica(c);
+    if (slug) {
+      condicoes.push(where(`tem_${slug}`, '==', true));
+    }
   }
 
   condicoes.push(orderBy('criado_em', 'desc'));
   condicoes.push(limit(filtros.limite ?? PAGINA_PADRAO));
 
   return condicoes;
+}
+
+export function slugDeCaracteristica(caracteristica: string): string {
+  return caracteristica
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .split(/\s+/)
+    .join('_');
 }
 
 /**
@@ -79,33 +90,78 @@ export async function buscarImoveis(
   db: Firestore,
   filtros: BuscaFiltros
 ): Promise<Imovel[]> {
-  const condicoes = construirQuery(db, filtros);
-  const snapshot = await getDocs(query(collection(db, COLEÇÃO), ...condicoes));
-  const imoveis: Imovel[] = [];
+  try {
+    const condicoes = construirQuery(db, filtros);
+    const snapshot = await getDocs(query(collection(db, COLEÇÃO), ...condicoes));
+    const imoveis: Imovel[] = [];
 
-  snapshot.forEach((doc) => {
-    const data = doc.data() as Omit<Imovel, 'id'>;
+    snapshot.forEach((doc) => {
+      const data = doc.data() as Omit<Imovel, 'id'>;
+      imoveis.push({ ...data, id: doc.id });
+    });
 
+    return filtrarEmMemoria(imoveis, filtros);
+  } catch (err) {
+    // Fallback: se a query com tem_* falhar (ex: imóveis antigos sem os campos
+    // booleanos, ou índice não criado), fazemos a query por array-contains na
+    // 1ª característica e filtramos o restante em memória.
+    console.warn('Query nativa falhou, usando fallback:', err);
+    const charFiltro = filtros.caracteristicas[0];
+    const condicoesFallback: QueryConstraint[] = [];
+    if (filtros.finalidade && filtros.finalidade !== 'ambos') {
+      condicoesFallback.push(
+        where(
+          'finalidade',
+          'in',
+          filtros.finalidade === 'venda' ? ['venda', 'ambos'] : ['aluguel', 'ambos']
+        )
+      );
+    }
+    if (filtros.tipo) condicoesFallback.push(where('tipo', '==', filtros.tipo));
+    if (filtros.bairro) condicoesFallback.push(where('bairro', '==', filtros.bairro));
+    if (charFiltro) {
+      condicoesFallback.push(
+        where('caracteristicas', 'array-contains', charFiltro.toLowerCase())
+      );
+    }
+    condicoesFallback.push(orderBy('criado_em', 'desc'));
+    condicoesFallback.push(limit(filtros.limite ?? PAGINA_PADRAO));
+
+    const snapshot = await getDocs(query(collection(db, COLEÇÃO), ...condicoesFallback));
+    const imoveis: Imovel[] = [];
+    snapshot.forEach((doc) => {
+      const data = doc.data() as Omit<Imovel, 'id'>;
+      imoveis.push({ ...data, id: doc.id });
+    });
+
+    return filtrarEmMemoria(imoveis, filtros);
+  }
+}
+
+function filtrarEmMemoria(imoveis: Imovel[], filtros: BuscaFiltros): Imovel[] {
+  const resultado: Imovel[] = [];
+
+  for (const imovel of imoveis) {
     const temTodasCaracteristicas = filtros.caracteristicas.every((c) =>
-      (data.caracteristicas ?? []).some((x: string) =>
+      (imovel.caracteristicas ?? []).some((x: string) =>
         x.toLowerCase().includes(c.toLowerCase())
       )
     );
-    if (!temTodasCaracteristicas) return;
+    if (!temTodasCaracteristicas) continue;
 
-    const valor = valorDoImovel({ ...data, id: doc.id }, filtros.finalidade);
+    const valor = valorDoImovel(imovel, filtros.finalidade);
 
     if (filtros.valorMinimo !== undefined && valor !== null && valor < filtros.valorMinimo) {
-      return;
+      continue;
     }
     if (filtros.valorMaximo !== undefined && valor !== null && valor > filtros.valorMaximo) {
-      return;
+      continue;
     }
 
-    imoveis.push({ ...data, id: doc.id, valor_efetivo: valor });
-  });
+    resultado.push({ ...imovel, valor_efetivo: valor });
+  }
 
-  return ordenar(imoveis, filtros.ordenacao);
+  return ordenar(resultado, filtros.ordenacao);
 }
 
 export function ordenar(

@@ -97,9 +97,9 @@ flowchart TD
 | Workflow | Diagrama | Cenários | Automação | Status |
 |----------|----------|----------|-----------|--------|
 | Arquitetura | `00-arquitetura.md` | — | — | ✅ Documentado |
-| Autenticação | `01-auth-workflow.md` | A1–A6 | ✅ Playwright (7 E2E) | ✅ Documentado e testado |
-| Busca | `02-busca-workflow.md` | B1–B11 | ✅ Playwright (filtros) | ✅ Documentado e testado |
-| Ingestão | `03-ingestao-workflow.md` | C1–C12 | ✅ pytest (71) | ✅ Documentado e testado |
+| Autenticação | `01-auth-workflow.md` | A1–A6 | ✅ Playwright (8 E2E) | ✅ Documentado e testado |
+| Busca | `02-busca-workflow.md` | B1–B12 | ✅ Playwright (filtros + galeria) | ✅ Documentado e testado |
+| Ingestão | `03-ingestao-workflow.md` | C1–C12 | ✅ pytest (75) | ✅ Documentado e testado |
 | API/Validação | `03-ingestao-workflow.md` | P1–P8, S1–S5 | ✅ pytest (test_validacao/test_server) | ✅ Documentado e testado |
 | WhatsApp | `03-ingestao-workflow.md` | W1–W3 | ✅ pytest (webhook) | ✅ Documentado e testado |
 | Fotos | `04-dados-er.md` | F1–F3 | 🚧 manual/emulador storage | ✅ Implementado |
@@ -111,9 +111,9 @@ flowchart TD
 
 | Data | Suite | Resultado |
 |------|-------|-----------|
-| Ago/2026 | `pytest backend/tests/` (estrutura + firestore_repo + captura + validacao + server) | 71 passando |
+| Ago/2026 | `pytest backend/tests/` (estrutura + firestore_repo + captura + validacao + server) | 75 passando |
 | Ago/2026 | `tests/rules/test-rules.mjs` (emulador) | 11 passando |
-| Ago/2026 | `playwright test` (E2E contra produção) | 7 passando |
+| Ago/2026 | `playwright test` (E2E contra produção) | 8 passando |
 
 ## Novos cenários (Sprint 12)
 
@@ -129,3 +129,12 @@ flowchart TD
 | W1 | WhatsApp | Webhook sem Body → TwiML de orientação |
 | W2 | WhatsApp | Mídia não-áudio → "Envie um texto ou áudio" |
 | W3 | WhatsApp | Body válido → resposta TwiML em XML |
+
+## Novos cenários (Sprint 13)
+
+| # | Workflow | Cenário |
+|---|----------|---------|
+| B12 | Busca/Fotos | Galeria de fotos abre ao clicar; navega e fecha |
+| C13 | Ingestão | `tem_*` booleanos derivados por característica (`tem_energia_solar`) |
+| C14 | Ingestão | Slug sem acentos (`Condomínio fechado` → `condominio_fechado`) |
+| B5b | Busca | Múltiplas características via query nativa `tem_*` (fallback em memória) |

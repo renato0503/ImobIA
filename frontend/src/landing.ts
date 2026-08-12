@@ -154,9 +154,10 @@ export function renderLanding() {
             <div class="lp-card">
               <h3>Já disponível</h3>
               <ul>
-                <li>Busca com filtros combinados (finalidade, tipo, bairro, valor, características).</li>
-                <li>Cards de resultados com contato e descrição.</li>
+                <li>Busca com filtros combinados (finalidade, tipo, bairro, faixa de valor, múltiplas características).</li>
+                <li>Cards com fotos, contato, descrição e galeria navegável.</li>
                 <li>Resumo do imóvel copiado para o WhatsApp.</li>
+                <li>Captação de imóveis por texto, link ou áudio via inteligência artificial.</li>
                 <li>Login e cadastro com e-mail e senha.</li>
                 <li>Acesso pelo celular ou computador (PWA).</li>
               </ul>
@@ -164,9 +165,8 @@ export function renderLanding() {
             <div class="lp-card">
               <h3>Em desenvolvimento</h3>
               <ul>
-                <li>Captação de imóveis por mensagem de WhatsApp.</li>
+                <li>Recebimento automático de imóveis por WhatsApp.</li>
                 <li>Coleta automática de anúncios de portais externos.</li>
-                <li>Upload e galeria de fotos dos imóveis.</li>
                 <li>Área do corretor com painel do acervo.</li>
               </ul>
             </div>

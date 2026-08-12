@@ -342,7 +342,7 @@ function renderCards(el: HTMLElement, imoveis: Imovel[], acrescentar = false) {
 
       return `
       <article class="card" data-id="${im.id}">
-        <div class="card-foto">
+        <div class="card-foto${fotos.length > 0 ? ' clicavel' : ''}" onclick="window.abrirGaleria('${im.id}')">
           ${
             foto
               ? `<img src="${foto}" alt="${im.tipo}" loading="lazy" />`
@@ -441,6 +441,7 @@ function mostrarToast(msg: string) {
 declare global {
   interface Window {
     copiarUm: (id: string) => void;
+    abrirGaleria: (id: string) => void;
   }
 }
 
@@ -452,6 +453,74 @@ window.copiarUm = (id: string) => {
     mostrarToast('Resumo copiado!');
   });
 };
+
+// ---------- Galeria de fotos ----------
+let galeriaIndice = 0;
+let galeriaFotos: string[] = [];
+
+window.abrirGaleria = (id: string) => {
+  const im = ultimosResultados.find((i) => i.id === id);
+  const fotos = im?.fotos ?? [];
+  if (fotos.length === 0) return;
+
+  galeriaFotos = fotos;
+  galeriaIndice = 0;
+  renderGaleria();
+  registrarEvento('galeria_aberta', { imovelId: id });
+};
+
+function renderGaleria() {
+  const existe = document.getElementById('galeria');
+  if (existe) existe.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'galeria';
+  overlay.className = 'galeria';
+  overlay.innerHTML = `
+    <div class="galeria-conteudo" role="dialog" aria-label="Galeria de fotos">
+      <button class="galeria-fechar" id="galeria-fechar" aria-label="Fechar">✕</button>
+      <button class="galeria-nav galeria-anterior" id="galeria-anterior" aria-label="Anterior">‹</button>
+      <img id="galeria-img" src="${galeriaFotos[0]}" alt="Foto do imóvel" />
+      <button class="galeria-nav galeria-proxima" id="galeria-proxima" aria-label="Próxima">›</button>
+      <p class="galeria-contador" id="galeria-contador"></p>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const atualizarContador = () => {
+    const img = document.getElementById('galeria-img') as HTMLImageElement;
+    img.src = galeriaFotos[galeriaIndice];
+    document.getElementById('galeria-contador')!.textContent =
+      `${galeriaIndice + 1} / ${galeriaFotos.length}`;
+  };
+
+  document.getElementById('galeria-fechar')!.addEventListener('click', () => overlay.remove());
+  document.getElementById('galeria-anterior')!.addEventListener('click', () => {
+    galeriaIndice = (galeriaIndice - 1 + galeriaFotos.length) % galeriaFotos.length;
+    atualizarContador();
+  });
+  document.getElementById('galeria-proxima')!.addEventListener('click', () => {
+    galeriaIndice = (galeriaIndice + 1) % galeriaFotos.length;
+    atualizarContador();
+  });
+  overlay.addEventListener('click', (ev) => {
+    if (ev.target === overlay) overlay.remove();
+  });
+  document.addEventListener('keydown', (ev) => {
+    if (!document.getElementById('galeria')) return;
+    if (ev.key === 'Escape') overlay.remove();
+    if (ev.key === 'ArrowLeft') {
+      galeriaIndice = (galeriaIndice - 1 + galeriaFotos.length) % galeriaFotos.length;
+      atualizarContador();
+    }
+    if (ev.key === 'ArrowRight') {
+      galeriaIndice = (galeriaIndice + 1) % galeriaFotos.length;
+      atualizarContador();
+    }
+  });
+
+  atualizarContador();
+}
 
 function registrarEvento(nome: string, params?: Record<string, unknown>) {
   analytics?.then((a) => {

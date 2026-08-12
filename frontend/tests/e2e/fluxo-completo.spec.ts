@@ -62,6 +62,24 @@ test.describe('ImobIA — fluxo completo', () => {
     await expect(page.locator('#toast')).toContainText('Resumo copiado');
   });
 
+  test('B12: galeria de fotos abre e navega', async ({ page }) => {
+    await page.goto('/#/app');
+    await page.locator('#login-email').fill(EMAIL);
+    await page.locator('#login-senha').fill(SENHA);
+    await page.getByRole('button', { name: 'Entrar' }).click();
+    await expect(page.locator('.card').first()).toBeVisible({ timeout: 15000 });
+
+    // a galeria abre ao clicar na foto clicável
+    await page.locator('.card-foto.clicavel').first().click();
+    await expect(page.locator('#galeria')).toBeVisible();
+    await expect(page.locator('#galeria-contador')).toContainText('/');
+
+    // navega para a próxima foto e fecha
+    await page.locator('#galeria-proxima').click();
+    await page.locator('#galeria-fechar').click();
+    await expect(page.locator('#galeria')).not.toBeVisible();
+  });
+
   test('A6: sair volta para a landing', async ({ page }) => {
     await page.goto('/#/app');
     await page.locator('#login-email').fill(EMAIL);

@@ -173,6 +173,23 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
   - Badge "Admin" no topbar quando aplicável.
 - **Testes:** +30 cenários (`test_validacao.py` e `test_server.py` com Flask test client + mocks) → **71 passando**.
 
+### Sprint 13 — Busca Nativa, Galeria, Backup e Operação
+- **Múltiplas características na query nativa:**
+  - `estrutura.py` agora deriva campos booleanos `tem_<slug>` por característica
+    (`_adicionar_booleanos_caracteristicas` + `slug_de_caracteristica`).
+  - `imoveis.ts` (frontend) monta query com múltiplos `where('tem_<slug>', '==', true)`;
+    fallback automático em memória caso a query nativa falhe (imóveis antigos/índice ausente).
+- **Galeria de fotos:** clicar na foto do card abre um modal com navegação
+  (setas + teclado ←/→, Esc fecha), contador `n / total`. Evento `galeria_aberta` no Analytics.
+- **Dados de exemplo enriquecidos:** `seed.py` agora passa por `_normalizar` (gera `tem_*`)
+  e grava **8 imóveis** com fotos Unsplash, contatos e descrições. Suporte a `--limpar`.
+- **Backup:** `backup.py` exporta `imoveis`, `leads`, `usuarios` para JSON local
+  (carimbo de data/hora); `backups/` ignorado pelo git.
+- **Landing:** seção "Já disponível" atualizada (fotos/galeria, captação por texto/link/áudio);
+  "Em desenvolvimento" enxugada (WhatsApp automático, scraping, painel do corretor).
+- **Documentação de operação:** `docs/operacao.md` — rotinas, deploy, testes, monitoramento,
+  escalabilidade e troubleshooting.
+
 ---
 
 ## 3. Sprint Atual (Consolidação — etapa final)
@@ -231,7 +248,7 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
 
 ### 4.3 Busca e Frontend
 - [x] Autocomplete de bairros a partir dos dados reais do banco (popula `<datalist>`).
-- [ ] Suporte a múltiplas características na query nativa (revisar índices).
+- [x] Suporte a múltiplas características na query nativa (campos booleanos `tem_*` + fallback em memória).
 - [x] Filtrar por faixa de valor (mín/máx) e ordenação.
 - [x] Upload de fotos via Firebase Storage + renderização nos cards (contagem + botão admin).
 - [x] Paginação/`load more` para acervos grandes.
@@ -264,15 +281,15 @@ Este documento é o diário de bordo do desenvolvimento do ImobIA, do zero ao Go
 - [ ] Manter `docs/diagrams/05-matriz-testes.md` atualizado a cada sprint.
 
 ### 4.6 Operações e Observabilidade
-- [x] Analytics no frontend (eventos `busca`, `copiar_resumo`, `lead_enviado` via Firebase Analytics).
+- [x] Analytics no frontend (eventos `busca`, `copiar_resumo`, `lead_enviado`, `foto_upload`, `galeria_aberta`).
 - [x] Logs estruturados no backend (`logging` em ingest/server/scraper/captura/estrutura).
 - [x] CI/CD: build do frontend + `firebase deploy` via GitHub Actions.
-- [ ] Backup periódico do Firestore (exportação programada).
+- [x] Backup periódico do Firestore (`backup.py` — JSON local, sem custo).
 
 ### 4.7 Go-Live
 - [ ] Validação com usuários reais (corretores) em ambiente controlado.
-- [ ] Plano de dados de exemplo (fotos reais, contatos, descrições).
-- [ ] Documentação de operação (como rodar, monitorar, escalar).
+- [x] Plano de dados de exemplo (8 imóveis com fotos Unsplash, contatos e descrições).
+- [x] Documentação de operação (`docs/operacao.md`).
 - [ ] Release notes e comunicação da Fase 3.
 
 ---

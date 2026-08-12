@@ -21,7 +21,7 @@ sequenceDiagram
   Note over S: finalidade='aluguel' → where('finalidade','in',['aluguel','ambos'])
   Note over S: tipo='Casa' → where('tipo','==',tipo)
   Note over S: bairro → where('bairro','==',bairro)
-  Note over S: caracteristicas[0] → where('caracteristicas','array-contains',c)
+  Note over S: cada característica → where('tem_<slug>','==',true) [campos booleanos]
   Note over S: orderBy('criado_em','desc') + limit(PAGINA_PADRAO=50)
   S->>F: getDocs(query)
   F-->>S: snapshot
@@ -88,8 +88,11 @@ flowchart TD
 
 - **Índices compostos** (`firestore.indexes.json`): `tipo+criado_em`, `bairro+criado_em`,
   `finalidade+criado_em`, `finalidade+tipo+criado_em`, `bairro+tipo+criado_em`, `caracteristicas+criado_em`.
-- **Limitação conhecida:** múltiplos `array-contains` exigiriam índice composto por combinação;
-  o MVP resolve a 1ª característica na query e o restante em memória (`imoveis.ts:buscarImoveis`).
+- **Múltiplas características:** cada característica é gravada como booleano `tem_<slug>`
+  (ex: `tem_energia_solar: true`) pelo backend (`estrutura.py`). A query usa vários
+  `where('tem_X','==',true)` de forma nativa; se o índice faltar ou houver imóveis antigos,
+  o frontend cai para `array-contains` (1ª característica) + filtro em memória
+  (`imoveis.ts:filtrarEmMemoria`).
 - **Ordenação em memória:** como a query já vem por `criado_em`, a reordenação por valor é feita
   no cliente (`imoveis.ts:ordenar`) com `valor_efetivo` preenchido na busca.
 - **Paginação via limite:** incrementa `estadoFiltros.limite`; sem cursor (`startAfter`) por enquanto.
